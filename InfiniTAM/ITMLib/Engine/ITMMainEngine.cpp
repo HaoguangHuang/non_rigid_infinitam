@@ -2,6 +2,7 @@
 
 #include "ITMMainEngine.h"
 #include "pcl/visualization/cloud_viewer.h"
+#include "../Objects/nodeGraph.h"
 
 using namespace ITMLib::Engine;
 
@@ -203,7 +204,7 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 //	pcl::PointCloud<pcl::PointXYZ>::Ptr initial_pc(new pcl::PointCloud<pcl::PointXYZ>::Ptr);
 	this->extracted_cloud->points.reserve(100000);
 	this->cloud = cloud;
-	this->output_file_name = output_fname;
+
 	// create all the things required for marching cubes and mesh extraction
 	// - uses additional memory (lots!)
 	static const bool createMeshingEngine = true;
@@ -272,6 +273,72 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 	mainProcessingActive = true;
 }
 
+
+ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib *calib, Vector2i imgSize_rgb, Vector2i imgSize_d)
+{
+    // create all the things required for marching cubes and mesh extraction
+    // - uses additional memory (lots!)
+    static const bool createMeshingEngine = true;
+
+    if ((imgSize_d.x == -1) || (imgSize_d.y == -1)) imgSize_d = imgSize_rgb;
+
+    this->settings = settings;
+
+    this->scene = new ITMScene<ITMVoxel, ITMVoxelIndex>(&(settings->sceneParams), settings->useSwapping,
+                                                        settings->deviceType == ITMLibSettings::DEVICE_CUDA ? MEMORYDEVICE_CUDA : MEMORYDEVICE_CPU);
+
+    meshingEngine = NULL;
+    switch (settings->deviceType)
+    {
+        case ITMLibSettings::DEVICE_CPU:
+            lowLevelEngine = new ITMLowLevelEngine_CPU();
+            viewBuilder = new ITMViewBuilder_CPU(calib);
+            visualisationEngine = new ITMVisualisationEngine_CPU<ITMVoxel, ITMVoxelIndex>(scene);
+            if (createMeshingEngine) meshingEngine = new ITMMeshingEngine_CPU<ITMVoxel, ITMVoxelIndex>();
+            break;
+        case ITMLibSettings::DEVICE_CUDA:
+#ifndef COMPILE_WITHOUT_CUDA
+            lowLevelEngine = new ITMLowLevelEngine_CUDA();
+		viewBuilder = new ITMViewBuilder_CUDA(calib);
+		visualisationEngine = new ITMVisualisationEngine_CUDA<ITMVoxel, ITMVoxelIndex>(scene);
+		if (createMeshingEngine) meshingEngine = new ITMMeshingEngine_CUDA<ITMVoxel, ITMVoxelIndex>();
+#endif
+            break;
+        case ITMLibSettings::DEVICE_METAL:
+#ifdef COMPILE_WITH_METAL
+            lowLevelEngine = new ITMLowLevelEngine_Metal();
+		viewBuilder = new ITMViewBuilder_Metal(calib);
+		visualisationEngine = new ITMVisualisationEngine_Metal<ITMVoxel, ITMVoxelIndex>(scene);
+		if (createMeshingEngine) meshingEngine = new ITMMeshingEngine_CPU<ITMVoxel, ITMVoxelIndex>();
+#endif
+            break;
+    }
+
+    mesh = NULL;
+    if (createMeshingEngine) mesh = new ITMMesh(settings->deviceType == ITMLibSettings::DEVICE_CUDA ? MEMORYDEVICE_CUDA : MEMORYDEVICE_CPU);
+
+    Vector2i trackedImageSize = ITMTrackingController::GetTrackedImageSize(settings, imgSize_rgb, imgSize_d);
+
+    renderState_live = visualisationEngine->CreateRenderState(trackedImageSize);
+    renderState_freeview = NULL; //will be created by the visualisation engine
+
+    denseMapper = new ITMDenseMapper<ITMVoxel, ITMVoxelIndex>(settings);
+    denseMapper->ResetScene(scene);
+
+    imuCalibrator = new ITMIMUCalibrator_iPad();
+    tracker = ITMTrackerFactory<ITMVoxel, ITMVoxelIndex>::Instance().Make(trackedImageSize, settings, lowLevelEngine, imuCalibrator, scene);
+    trackingController = new ITMTrackingController(tracker, visualisationEngine, lowLevelEngine, settings);
+
+    trackingState = trackingController->BuildTrackingState(trackedImageSize);
+    tracker->UpdateInitialPose(trackingState);
+
+    view = NULL; // will be allocated by the view builder
+
+    fusionActive = true;
+    mainProcessingActive = true;
+}
+
+
 ITMMainEngine::~ITMMainEngine()
 {
 	delete renderState_live;
@@ -311,7 +378,11 @@ void ITMMainEngine::SaveSceneToMesh(const char *objFileName)
 	mesh->WriteSTL(objFileName);
 }
 
-void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, ITMIMUMeasurement *imuMeasurement)
+
+
+
+void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage,
+                                 const int& currentFrameNo, ITMIMUMeasurement *imuMeasurement)
 {
 	// prepare image and turn it into a depth image
 	if (imuMeasurement==NULL) viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter,settings->modelSensorNoise);
@@ -319,35 +390,59 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 
 	if (!mainProcessingActive) return;
 
+	//transform uvd to XYZ
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cld(new pcl::PointCloud<pcl::PointXYZ>);
+    ITMMainEngine::transformUVD2XYZ(cld, view);
+
+    if(currentFrameNo == 0){
+		//exclude outlier in the first frame
+		ITMMainEngine::boundingBox(cld);
+
+        //initial nodeGraph
+		nodeGraph _nodeGraph(cld);
+		_nodeGraph.createNodeTree();
+
+        //integrate DepthImage into canonical volume
+
+
+        //raycast canonical volume
+
+        //visualize canonical volume in GUI of canonical view and live view, represented in mesh format will be better
+
+        //perform fetchCloud in canonical volume
+    }
+    else{ //currentFrameNo >= 1
+        //check nodeGraph needed to be updated or not
+
+            //update nodeGraph
+
+        //hierarchical ICP
+
+        //use warp field and psdf to integrate DepthImage into canonical volume(here we can refer to VolumeDeform)
+
+        //perform fetchCloud in canonical volume
+
+        //use warp field to get live pointcloud model
+
+        //raycast canonical volume
+
+        //visualize canonical volume in GUI of canonical view and live view, represented in mesh format will be better
+
+
+    }
+
+
+
+#if 0
 	// tracking
 	trackingController->Track(trackingState, view); //ICP,get transformation between current frame and fusioned model
 
-    /* visualize pointCloud */
-//	pcl::visualization::CloudViewer viewer("Cloud Viewer");
-//	viewer.showCloud(cloud);
-//	while(!viewer.wasStopped()){}
-
-    // build a new tsdf volume for the warped pointcloud, and fusion the live frame into _warped_scene
-    if (fusionActive) _warped_denseMapper->_warped_ProcessFrame(view, trackingState, scene, renderState_live, cloud, _warped_scene);
-
-    //using fetchCloud algorithm to extract pointcloud from _warped_scene
-	fetchCloud_test(this->extracted_cloud, _warped_scene);
-
-    /* visualize pointCloud */
-//	pcl::visualization::CloudViewer viewer("Cloud Viewer");
-//	viewer.showCloud(extracted_cloud);
-//	while(!viewer.wasStopped()){}
-
-    /*output extracted_cloud*/
-	pcl::io::savePCDFileBinary(this->output_file_name, *extracted_cloud);
-    exit(0);
-
 	// fusions
-	//if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
+	if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
 
 	// raycast to renderState_live for tracking and free visualisation
-	//trackingController->Prepare(trackingState, view, renderState_live);
-
+	trackingController->Prepare(trackingState, view, renderState_live);
+#endif
 
 }
 

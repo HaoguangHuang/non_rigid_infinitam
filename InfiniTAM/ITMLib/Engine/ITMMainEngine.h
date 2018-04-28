@@ -4,8 +4,12 @@
 
 #include "../ITMLib.h"
 #include "../Utils/ITMLibSettings.h"
+#include "./ITMMeshingEngine.h"
+#include "./ITMDenseMapper.h"
+//#include "../Utils/ITMLibDefines.h"
 #include "pcl/point_types.h"
 #include "pcl/io/pcd_io.h"
+#include "pcl/point_cloud.h"
 
 /** \mainpage
     This is the API reference documentation for InfiniTAM. For a general
@@ -100,7 +104,7 @@ namespace ITMLib
 			ITMScene<ITMVoxel, ITMVoxelIndex>* GetScene(void) { return scene; }
 
 			/// Process a frame with rgb and depth images and optionally a corresponding imu measurement
-			void ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage,
+			void ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, const int& currentFrameNo,
 			ITMIMUMeasurement *imuMeasurement = NULL);
 
 			// Gives access to the data structure used internally to store any created meshes
@@ -131,6 +135,9 @@ namespace ITMLib
 			*/
 			ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib *calib, pcl::PointCloud<pcl::PointXYZ>::Ptr, std::string output_fname,
                           Vector2i imgSize_rgb, Vector2i imgSize_d = Vector2i(-1,-1));
+
+			ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib *calib, Vector2i imgSize_rgb, Vector2i imgSize_d = Vector2i(-1,-1));
+
 			~ITMMainEngine();
 
 
@@ -141,7 +148,11 @@ namespace ITMLib
             void fetchCloud_test(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *_warped_scene);
 
 
-			std::string output_file_name;
+			/**********************************************************/
+			void transformUVD2XYZ(pcl::PointCloud<pcl::PointXYZ>::Ptr cld, const ITMView*);
+
+            void boundingBox(pcl::PointCloud<pcl::PointXYZ>::Ptr cld);
+
 
 
 		};

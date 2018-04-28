@@ -19,6 +19,7 @@ find_package(PCL REQUIRED)
 find_package(CUDA QUIET)
 CANONIFY_BOOL(CUDA_FOUND)
 CANONIFY_BOOL(PCL_FOUND)
+CANONIFY_BOOL(EIGEN_FOUND)
 ##################################
 #message("this is CUDA_FOUND----------------" ${CUDA_FOUND})
 #set(CUDA_FOUND FALSE)
@@ -26,7 +27,7 @@ CANONIFY_BOOL(PCL_FOUND)
 ##################################
 message(STATUS "CUDA found: " ${CUDA_FOUND})
 message(STATUS "PCL found: " ${PCL_FOUND})
-
+message(STATUS "Eigen found: " ${EIGEN_FOUND})
 #find_package(OpenNI QUIET)
 find_package(OpenNI QUIET)
 CANONIFY_BOOL(OPENNI_FOUND)
@@ -78,6 +79,7 @@ ENDIF()
 
 #################################################
 include_directories("/usr/local/include/pcl-1.8")
+#include_directories(SYSTEM ${EIGEN_INCLUDE_DIRS})
 include_directories("/usr/include/eigen3")
 message("PCL_INCLUDE:" ${PCL_INCLUDE_DIRS})
 include_directories(${PCL_INCLUDE_DIRS})

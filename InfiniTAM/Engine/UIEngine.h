@@ -94,8 +94,6 @@ namespace InfiniTAM
 			void Initialise(int & argc, char** argv, ImageSourceEngine *imageSource, IMUSourceEngine *imuSource, ITMMainEngine *mainEngine,
 				const char *outFolder, ITMLibSettings::DeviceType deviceType);
 
-			void Initialise(int & argc, char** argv, ImageSourceEngine *imageSource, IMUSourceEngine *imuSource, ITMMainEngine *mainEngine,
-							const char *outFolder, ITMLibSettings::DeviceType deviceType, pcl::PointCloud<pcl::PointXYZ>::Ptr cld);
 
 			void Shutdown();
 

@@ -54,7 +54,7 @@ UIEngine.h
 #CLIEngine.h
 RealSenseEngine.cpp
 RealSenseEngine.h
-)
+        ../ITMLib/Engine/ITMMainEngine_dynamic.cpp)
 
 target_link_libraries(Engine ${GLUT_LIBRARIES})
 target_link_libraries(Engine ${OPENGL_LIBRARIES})

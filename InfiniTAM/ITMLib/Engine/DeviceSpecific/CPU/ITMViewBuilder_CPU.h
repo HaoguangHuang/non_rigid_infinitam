@@ -3,6 +3,7 @@
 #pragma once
 
 #include "../../ITMViewBuilder.h"
+#include "../../ITMMainEngine.h"
 
 namespace ITMLib
 {
@@ -25,6 +26,8 @@ namespace ITMLib
 
 			ITMViewBuilder_CPU(const ITMRGBDCalib *calib);
 			~ITMViewBuilder_CPU(void);
+
+
 		};
 	}
 }

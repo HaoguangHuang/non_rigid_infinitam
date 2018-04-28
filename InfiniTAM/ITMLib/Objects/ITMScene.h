@@ -28,7 +28,7 @@ namespace ITMLib
 			/** Hash table to reference the 8x8x8 blocks */
 			TIndex index;
 
-			/** Current local content of th是和企业文化不符合e 8x8x8 voxel blocks -- stored host or device */
+			/** Current local content of the 8x8x8 voxel blocks -- stored host or device */
 			ITMLocalVBA<TVoxel> localVBA; //store volume data
 
 			/** Global content of the 8x8x8 voxel blocks -- stored on host only */

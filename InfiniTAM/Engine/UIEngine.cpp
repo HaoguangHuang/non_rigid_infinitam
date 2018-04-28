@@ -144,15 +144,6 @@ void UIEngine::glutIdleFunction()
 		glutPostRedisplay();
 	}
 
-	if(uiEngine->processedFrameNo == 0){
-		printf("processing one frame ...\n");
-		uiEngine->mainLoopAction = UIEngine::PROCESS_FRAME;
-	}
-
-	if(uiEngine->processedFrameNo == 1){
-		printf("exiting ...\n");
-		uiEngine->mainLoopAction = UIEngine::EXIT;
-	}
 }
 
 void UIEngine::glutKeyUpFunction(unsigned char key, int x, int y)
@@ -336,7 +327,7 @@ void UIEngine::glutMouseWheelFunction(int button, int dir, int x, int y)
 }
 
 void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSource, IMUSourceEngine *imuSource, ITMMainEngine *mainEngine,
-	const char *outFolder, ITMLibSettings::DeviceType deviceType, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
+	const char *outFolder, ITMLibSettings::DeviceType deviceType)
 {
 	this->freeviewActive = false;
 	this->intergrationActive = true;
@@ -368,7 +359,7 @@ void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSourc
 	int textHeight = 30; // Height of text area
 	//winSize.x = (int)(1.5f * (float)MAX(imageSource->getImageSize().x, imageSource->getDepthImageSize().x));
 	//winSize.y = MAX(imageSource->getRGBImageSize().y, imageSource->getDepthImageSize().y) + textHeight;
-	Vector2i a = imageSource->getDepthImageSize();
+
 	winSize.x = (int)(1.5f * (float)(imageSource->getDepthImageSize().x));
 	winSize.y = imageSource->getDepthImageSize().y + textHeight;
 	float h1 = textHeight / (float)winSize.y, h2 = (1.f + h1) / 2;
@@ -455,8 +446,6 @@ void UIEngine::ProcessFrame()     //once press keyboard "n", it step into this f
 	if (!imageSource->hasMoreImages()) return;
 	imageSource->getImages(inputRGBImage, inputRawDepthImage); //read rgb and depth frame by frame
 
-	// use var 'currentFrameNo' to get transformation.txt frame by frame
-
 
 	if (imuSource != NULL) {
 		if (!imuSource->hasMoreMeasurements()) return;
@@ -480,8 +469,8 @@ void UIEngine::ProcessFrame()     //once press keyboard "n", it step into this f
 	sdkStartTimer(&timer_instant); sdkStartTimer(&timer_average);
 
 	//actual processing on the mailEngine
-	if (imuSource != NULL) mainEngine->ProcessFrame(inputRGBImage, inputRawDepthImage, inputIMUMeasurement);
-	else mainEngine->ProcessFrame(inputRGBImage, inputRawDepthImage);
+	if (imuSource != NULL) mainEngine->ProcessFrame(inputRGBImage, inputRawDepthImage, currentFrameNo, inputIMUMeasurement);
+	else mainEngine->ProcessFrame(inputRGBImage, inputRawDepthImage, currentFrameNo);
 
 #ifndef COMPILE_WITHOUT_CUDA
 	ITMSafeCall(cudaThreadSynchronize());

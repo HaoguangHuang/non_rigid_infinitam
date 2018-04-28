@@ -19,6 +19,8 @@ Engine/ITMRenTracker.cpp
 Engine/ITMTrackerFactory.cpp
 Engine/ITMTrackingController.cpp
 Engine/ITMVisualisationEngine.cpp
+
+Engine/ITMMainEngine_dynamic.cpp
 )
 
 SET(ITMLIB_ENGINE_HEADERS
@@ -176,7 +178,7 @@ ${ITMLIB_UTILS_HEADERS}
 set(ITMLIB_CPU_OBJECTS
 ${ITMLIB_ENGINE_DEVICESPECIFIC_CPU_SOURCES}
 ${ITMLIB_ENGINE_DEVICESPECIFIC_CPU_HEADERS}
-)
+        Objects/nodeGraph.h Objects/node.h Objects/nodeGraph.cpp Objects/node.cpp)
 
 set(ITMLIB_CUDA_OBJECTS
 ${ITMLIB_ENGINE_DEVICESPECIFIC_CUDA_SOURCES}

@@ -84,9 +84,11 @@ void ImageFileReader::getImages(ITMUChar4Image *rgb, ITMShortImage *rawDepth)
 	if (!bUsedCache) { //jump out
 		char str[2048];
 
+//		sprintf(str, rgbImageMask, currentFrameNo);
 		sprintf(str, rgbImageMask, currentFrameNo);
 		if (!ReadImageFromFile(rgb, str)) printf("error reading file '%s'\n", str);
 
+//		sprintf(str, depthImageMask, currentFrameNo);
 		sprintf(str, depthImageMask, currentFrameNo);
 		if (!ReadImageFromFile(rawDepth, str)) printf("error reading file '%s'\n", str);
 	}
