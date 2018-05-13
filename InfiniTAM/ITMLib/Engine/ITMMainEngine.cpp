@@ -3,137 +3,18 @@
 #include "ITMMainEngine.h"
 #include "pcl/visualization/cloud_viewer.h"
 #include "../Objects/nodeGraph.h"
+#include "./ITMMainEngine_dynamic.cpp"
 
 using namespace ITMLib::Engine;
 
-template<typename T>
-T inline get_abs(T x){ return x < 0? -x:x; }
-
-
-void ITMMainEngine::fetchCloud_test(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud,
-							   ITMScene<ITMVoxel, ITMVoxelIndex> *_warped_scene) {
-
-	int volume_x = _warped_scene->index.getVolumeSize().x;
-	int volume_y = _warped_scene->index.getVolumeSize().y;
-	int volume_z = _warped_scene->index.getVolumeSize().z;
-
-//	const int DIVISOR = 32767;
-
-#define FETCH(x, y, z) (_warped_scene->localVBA.GetVoxelBlocks()[(x) + (y) *volume_x + (z) * volume_x * volume_y])
-
-	Eigen::Array3f cell_size(_warped_scene->sceneParams->voxelSize);
-
-	Eigen::Vector3f translation_volumeCoo_to_liveFrameCoo(-volume_x*cell_size[0]/2, -volume_y*cell_size[1]/2, 0);
-
-
-/*openMP shoule be opened*/
-//#ifdef WITH_OPENMP
-//#pragma omp parallel for
-//#endif
-	for (int x = 1; x < volume_x-1; x++){
-		for (int y = 1; y < volume_y-1; y++){
-			for (int z = 0; z < volume_z-1; z++){
-				ITMVoxel voxel_tmp = FETCH(x, y, z);
-				float F = ITMVoxel::SDF_valueToFloat(voxel_tmp.sdf); //[0,32767]
-				int W = voxel_tmp.w_depth;//{0,1}  after integraing the live frame, W of allocated voxels should not be zero anymore
-
-				if (W == 0 || F == 1) continue;
-
-				Eigen::Vector3f V = ((Eigen::Array3i(x,y,z).cast<float>() + Eigen::Array3f(0.5f))*cell_size).matrix();
-
-				int dz = 1;
-				//for (int dy = -1; dy < 2; dy++){
-					//for (int dx = -1; dx < 2; dx++){
-                for (int dy = 0; dy < 1; dy++){
-                    for (int dx = 0; dx < 1; dx++){
-						ITMVoxel voxel = FETCH(x+dx, y+dy, z+dz);
-						float Fn = ITMVoxel::SDF_valueToFloat(voxel.sdf); //[0,32767]
-						int Wn = voxel.w_depth;
-
-						//if (Wn == 0 || Fn == 1) continue;
-//                        F * Fn == 0 || (F > 0 && Fn < 0)
-						if (F * Fn == 0 || (F > 0 && Fn < 0)){
-							Eigen::Vector3f Vn = ((Eigen::Array3i (x+dx, y+dy, z+dz).cast<float>() + Eigen::Array3f(0.5f)) * cell_size).matrix();
-							Eigen::Vector3f point;
-							if (F == 0 && Fn ==0){//in volume coo
-#if 0
-                                {
-                                    int cnt = 0; int F[8];
-                                    ITMVoxel voxel1 = FETCH(x+2, y, z);
-                                    F[0] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    voxel1 = FETCH(x-2, y, z);
-                                    F[1] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    voxel1 = FETCH(x, y+2, z);
-                                    F[2] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    voxel1 = FETCH(x, y-2, z);
-                                    F[3] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    voxel1 = FETCH(x+2, y+2, z);
-                                    F[4] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    voxel1 = FETCH(x-2, y-2, z);
-                                    F[5] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    voxel1 = FETCH(x-2, y+2, z);
-                                    F[6] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    voxel1 = FETCH(x+2, y-2, z);
-                                    F[7] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    for(int i=0; i < 8; i++)
-                                        if(F[i]==0) cnt++;
-                                    if(cnt < 1) continue;
-                                }
-#endif
-                                point = (V + Vn) / 2;
-							}
-							else{ //(F==0,Fn!=0) or (F!=0,Fn==0)
-#if 0
-                                //check nearest voxel to find noise
-                                {
-                                    int cnt = 0; int F[8];
-                                    ITMVoxel voxel1 = FETCH(x+2, y, z);
-                                    F[0] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    voxel1 = FETCH(x-2, y, z);
-                                    F[1] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    voxel1 = FETCH(x, y+2, z);
-                                    F[2] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    voxel1 = FETCH(x, y-2, z);
-                                    F[3] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    voxel1 = FETCH(x+2, y+2, z);
-                                    F[4] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    voxel1 = FETCH(x-2, y-2, z);
-                                    F[5] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    voxel1 = FETCH(x-2, y+2, z);
-                                    F[6] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    voxel1 = FETCH(x+2, y-2, z);
-                                    F[7] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
-                                    for(int i=0; i < 8; i++)
-                                        if(F[i]==0) cnt++;
-                                    if(cnt < 1) continue;
-//                              }
-#endif
-                                point = (V * float(get_abs(Fn)) + Vn * float(get_abs(F))) / float(get_abs(F) + get_abs(Fn));
-							}
-
-
-							point = (point + translation_volumeCoo_to_liveFrameCoo) * 1000; //mm
-
-							pcl::PointXYZ xyz(point[0],point[1],point[2]);
-
-							extracted_cloud->push_back(xyz);
-						}
-					}
-				}
-			}
-		}
-	}
-
-
-}
-
-
-
+//template<typename T>
+//T inline get_abs(T x){ return x < 0? -x:x; }
 //
-//void ITMMainEngine::fetchCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud,
+//
+//void ITMMainEngine::fetchCloud_test(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud,
 //							   ITMScene<ITMVoxel, ITMVoxelIndex> *_warped_scene) {
 //
-//    int volume_x = _warped_scene->index.getVolumeSize().x;
+//	int volume_x = _warped_scene->index.getVolumeSize().x;
 //	int volume_y = _warped_scene->index.getVolumeSize().y;
 //	int volume_z = _warped_scene->index.getVolumeSize().z;
 //
@@ -143,57 +24,111 @@ void ITMMainEngine::fetchCloud_test(pcl::PointCloud<pcl::PointXYZ>::Ptr extracte
 //
 //	Eigen::Array3f cell_size(_warped_scene->sceneParams->voxelSize);
 //
-//    Eigen::Vector3f translation_volumeCoo_to_liveFrameCoo(-volume_x*cell_size[0]/2, -volume_y*cell_size[1]/2, 0);
+//	Eigen::Vector3f translation_volumeCoo_to_liveFrameCoo(-volume_x*cell_size[0]/2, -volume_y*cell_size[1]/2, 0);
 //
 //
 ///*openMP shoule be opened*/
-//#ifdef WITH_OPENMP
-//#pragma omp parallel for
-//#endif
-//	for (int x = 1; x < volume_x-1; x++){
-//		for (int y = 1; y < volume_y-1; y++){
-//			for (int z = 0; z < volume_z-1; z++){
+////#ifdef WITH_OPENMP
+////#pragma omp parallel for
+////#endif
+//	for (int x = 1; x < volume_x-1; x++) {
+//		for (int y = 1; y < volume_y - 1; y++) {
+//			for (int z = 0; z < volume_z - 1; z++) {
 //				ITMVoxel voxel_tmp = FETCH(x, y, z);
-//                float F = ITMVoxel::SDF_valueToFloat(voxel_tmp.sdf); //[0,32767]
+//				float F = ITMVoxel::SDF_valueToFloat(voxel_tmp.sdf); //[0,32767]
 //				int W = voxel_tmp.w_depth;//{0,1}  after integraing the live frame, W of allocated voxels should not be zero anymore
 //
 //				if (W == 0 || F == 1) continue;
 //
-//				Eigen::Vector3f V = ((Eigen::Array3i(x,y,z).cast<float>() + Eigen::Array3f(0.5f))*cell_size).matrix();
+//				Eigen::Vector3f V = ((Eigen::Array3i(x, y, z).cast<float>() + Eigen::Array3f(0.5f)) *
+//									 cell_size).matrix();
 //
 //				int dz = 1;
-//				for (int dy = -1; dy < 2; dy++){
-//					for (int dx = -1; dx < 2; dx++){
-//						ITMVoxel voxel = FETCH(x+dx, y+dy, z+dz);
-//                        float Fn = ITMVoxel::SDF_valueToFloat(voxel.sdf); //[0,32767]
+//				//for (int dy = -1; dy < 2; dy++){
+//				//for (int dx = -1; dx < 2; dx++){
+//				for (int dy = 0; dy < 1; dy++) {
+//					for (int dx = 0; dx < 1; dx++) {
+//						ITMVoxel voxel = FETCH(x + dx, y + dy, z + dz);
+//						float Fn = ITMVoxel::SDF_valueToFloat(voxel.sdf); //[0,32767]
 //						int Wn = voxel.w_depth;
 //
-//                        if (Wn == 0 || Fn == 1) continue;
+//						//if (Wn == 0 || Fn == 1) continue;
+////                        F * Fn == 0 || (F > 0 && Fn < 0)
+//						if (F * Fn == 0 || (F > 0 && Fn < 0)) {
+//							Eigen::Vector3f Vn = (
+//									(Eigen::Array3i(x + dx, y + dy, z + dz).cast<float>() + Eigen::Array3f(0.5f)) *
+//									cell_size).matrix();
+//							Eigen::Vector3f point;
+//							if (F == 0 && Fn == 0) {//in volume coo
+//#if 0
+//                                {
+//                                    int cnt = 0; int F[8];
+//                                    ITMVoxel voxel1 = FETCH(x+2, y, z);
+//                                    F[0] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    voxel1 = FETCH(x-2, y, z);
+//                                    F[1] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    voxel1 = FETCH(x, y+2, z);
+//                                    F[2] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    voxel1 = FETCH(x, y-2, z);
+//                                    F[3] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    voxel1 = FETCH(x+2, y+2, z);
+//                                    F[4] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    voxel1 = FETCH(x-2, y-2, z);
+//                                    F[5] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    voxel1 = FETCH(x-2, y+2, z);
+//                                    F[6] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    voxel1 = FETCH(x+2, y-2, z);
+//                                    F[7] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    for(int i=0; i < 8; i++)
+//                                        if(F[i]==0) cnt++;
+//                                    if(cnt < 1) continue;
+//                                }
+//#endif
+//								point = (V + Vn) / 2;
+//							} else { //(F==0,Fn!=0) or (F!=0,Fn==0)
+//#if 0
+//                                //check nearest voxel to find noise
+//                                {
+//                                    int cnt = 0; int F[8];
+//                                    ITMVoxel voxel1 = FETCH(x+2, y, z);
+//                                    F[0] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    voxel1 = FETCH(x-2, y, z);
+//                                    F[1] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    voxel1 = FETCH(x, y+2, z);
+//                                    F[2] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    voxel1 = FETCH(x, y-2, z);
+//                                    F[3] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    voxel1 = FETCH(x+2, y+2, z);
+//                                    F[4] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    voxel1 = FETCH(x-2, y-2, z);
+//                                    F[5] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    voxel1 = FETCH(x-2, y+2, z);
+//                                    F[6] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    voxel1 = FETCH(x+2, y-2, z);
+//                                    F[7] = ITMVoxel::SDF_valueToFloat(voxel1.sdf); //[0,32767]
+//                                    for(int i=0; i < 8; i++)
+//                                        if(F[i]==0) cnt++;
+//                                    if(cnt < 1) continue;
+////                              }
+//#endif
+//								point = (V * float(get_abs(Fn)) + Vn * float(get_abs(F))) /
+//										float(get_abs(F) + get_abs(Fn));
+//							}
 //
-//                        if (F * Fn <= 0){
-//                            Eigen::Vector3f Vn = ((Eigen::Array3i (x+dx, y+dy, z+dz).cast<float>() + Eigen::Array3f(0.5f)) * cell_size).matrix();
-//                            Eigen::Vector3f point;
-//                            if (F == 0 && Fn ==0){//in volume coo
-//                                point = (V + Vn) / 2;
-//                            }
-//                            else{
-//                                point = (V * (float)abs (Fn) + Vn * (float)abs (F)) / (float)(abs (F) + abs (Fn));
-//                            }
 //
+//							point = (point + translation_volumeCoo_to_liveFrameCoo) * 1000; //mm
 //
-//                            point = (point + translation_volumeCoo_to_liveFrameCoo) * 1000; //mm
+//							pcl::PointXYZ xyz(point[0], point[1], point[2]);
 //
-//                            pcl::PointXYZ xyz(point[0],point[1],point[2]);
-//
-//                            extracted_cloud->push_back(xyz);
-//                        }
+//							extracted_cloud->push_back(xyz);
+//						}
 //					}
 //				}
 //			}
 //		}
 //	}
 //
-//
+//}
 //}
 
 
@@ -201,9 +136,7 @@ void ITMMainEngine::fetchCloud_test(pcl::PointCloud<pcl::PointXYZ>::Ptr extracte
 //imgSize_rgb:(640,480)
 ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib *calib, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string output_fname,
 							 Vector2i imgSize_rgb, Vector2i imgSize_d):extracted_cloud(new pcl::PointCloud<pcl::PointXYZ>){
-//	pcl::PointCloud<pcl::PointXYZ>::Ptr initial_pc(new pcl::PointCloud<pcl::PointXYZ>::Ptr);
-	this->extracted_cloud->points.reserve(100000);
-	this->cloud = cloud;
+	//this->extracted_cloud->points.reserve(100000);
 
 	// create all the things required for marching cubes and mesh extraction
 	// - uses additional memory (lots!)
@@ -215,8 +148,6 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 
 	this->scene = new ITMScene<ITMVoxel, ITMVoxelIndex>(&(settings->sceneParams), settings->useSwapping, 
 		settings->deviceType == ITMLibSettings::DEVICE_CUDA ? MEMORYDEVICE_CUDA : MEMORYDEVICE_CPU);
-
-    this->_warped_scene = new ITMScene<ITMVoxel, ITMVoxelIndex>(&(settings->sceneParams), false, MEMORYDEVICE_CPU);
 
 
 	meshingEngine = NULL;
@@ -257,8 +188,8 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 	denseMapper = new ITMDenseMapper<ITMVoxel, ITMVoxelIndex>(settings);
 	denseMapper->ResetScene(scene);
 
-    _warped_denseMapper = new ITMDenseMapper<ITMVoxel, ITMVoxelIndex>(settings);
-    _warped_denseMapper->ResetScene(_warped_scene);
+//    _warped_denseMapper = new ITMDenseMapper<ITMVoxel, ITMVoxelIndex>(settings);
+//    _warped_denseMapper->ResetScene(_warped_scene);
 
 	imuCalibrator = new ITMIMUCalibrator_iPad();
 	tracker = ITMTrackerFactory<ITMVoxel, ITMVoxelIndex>::Instance().Make(trackedImageSize, settings, lowLevelEngine, imuCalibrator, scene);
@@ -274,7 +205,8 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 }
 
 
-ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib *calib, Vector2i imgSize_rgb, Vector2i imgSize_d)
+ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib *calib, Vector2i imgSize_rgb, Vector2i imgSize_d):
+        extracted_cloud(new pcl::PointCloud<pcl::PointXYZ>)
 {
     // create all the things required for marching cubes and mesh extraction
     // - uses additional memory (lots!)
@@ -365,6 +297,7 @@ ITMMainEngine::~ITMMainEngine()
 	if (mesh != NULL) delete mesh;
 }
 
+//extract a mesh from volume of class 'scene', and return a mesh by marching cubes algorithm
 ITMMesh* ITMMainEngine::UpdateMesh(void)
 {
 	if (mesh != NULL) meshingEngine->MeshScene(mesh, scene);
@@ -384,32 +317,41 @@ void ITMMainEngine::SaveSceneToMesh(const char *objFileName)
 void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage,
                                  const int& currentFrameNo, ITMIMUMeasurement *imuMeasurement)
 {
-	// prepare image and turn it into a depth image
+	/// prepare image and turn it into a depth image
 	if (imuMeasurement==NULL) viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter,settings->modelSensorNoise);
 	else viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter, imuMeasurement);
 
 	if (!mainProcessingActive) return;
 
-	//transform uvd to XYZ
+	///transform uvd to XYZ
     pcl::PointCloud<pcl::PointXYZ>::Ptr cld(new pcl::PointCloud<pcl::PointXYZ>);
     ITMMainEngine::transformUVD2XYZ(cld, view);
 
     if(currentFrameNo == 0){
-		//exclude outlier in the first frame
+		///exclude outlier in the first frame
 		ITMMainEngine::boundingBox(cld);
 
-        //initial nodeGraph
-		nodeGraph _nodeGraph(cld);
-		_nodeGraph.createNodeTree();
+        ///initial nodeGraph
+		nodeGraph* _nodeGraph = new nodeGraph(cld);
+		_nodeGraph->createNodeTree();
+		_nodeGraph->createNodeKDTree();
 
         //integrate DepthImage into canonical volume
+		denseMapper->integrateCanonicalVolume(view, scene, _nodeGraph);
 
+        ///raycast canonical volume
 
-        //raycast canonical volume
-
-        //visualize canonical volume in GUI of canonical view and live view, represented in mesh format will be better
+        //visualize canonical volume in GUI of canonical view and live view, represented in mesh format will be better.
+		// MarchingCubes
 
         //perform fetchCloud in canonical volume
+//		fetchCloud(extracted_cloud, scene);
+		fetchCloud_parallel(extracted_cloud, scene);
+
+        pcl::visualization::CloudViewer viewer("Cloud Viewer");
+        viewer.showCloud(extracted_cloud);
+        while(!viewer.wasStopped()){}
+
     }
     else{ //currentFrameNo >= 1
         //check nodeGraph needed to be updated or not
@@ -427,7 +369,6 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
         //raycast canonical volume
 
         //visualize canonical volume in GUI of canonical view and live view, represented in mesh format will be better
-
 
     }
 

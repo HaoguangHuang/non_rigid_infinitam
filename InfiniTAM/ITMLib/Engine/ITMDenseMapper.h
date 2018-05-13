@@ -16,6 +16,8 @@
 #include "pcl/io/pcd_io.h"
 #include "pcl/point_types.h"
 
+#include "../Objects/nodeGraph.h"
+
 namespace ITMLib
 {
 	namespace Engine
@@ -35,10 +37,6 @@ namespace ITMLib
 			/// Process a single frame
 			void ProcessFrame(const ITMView *view, const ITMTrackingState *trackingState, ITMScene<TVoxel,TIndex> *scene, ITMRenderState *renderState_live);
 
-			/// Process a warped pointcloud
-			void _warped_ProcessFrame(const ITMView *view, const ITMTrackingState *trackingState, ITMScene<TVoxel,TIndex> *scene, ITMRenderState *renderState_live,
-                                      pcl::PointCloud<pcl::PointXYZ>::Ptr cld, ITMScene<TVoxel,TIndex> *_warped_scene);
-
 
 			/// Update the visible list (this can be called to update the visible list when fusion is turned off)
 			void UpdateVisibleList(const ITMView *view, const ITMTrackingState *trackingState, ITMScene<TVoxel,TIndex> *scene, ITMRenderState *renderState);
@@ -49,7 +47,37 @@ namespace ITMLib
 			*/
 			explicit ITMDenseMapper(const ITMLibSettings *settings);
 			~ITMDenseMapper();
+
+
+			/*******************************************************/
+			//psdf
+			void integrateCanonicalVolume(const ITMView *view, ITMScene<TVoxel,TIndex> *scene, nodeGraph* );
+
+            /*
+             * @voxel:used for SDF value and weight update in canonical volume
+             * @voxel_in_model_coo:[x, y, z, 1]. voxel position in homogeneous format
+             * @projParams_d:[fx, fy, cx, cy]
+             * @mu:truncated bandwidth. 20mm
+             * @maxW:128
+             * @depth:depthMap. pixel in the i_th row, j_th col can be retrieved by depth[i*col+j]. Unit:mm
+             * @depthImgSize:[640, 480]
+             * @_nodeGraph
+             * */
+			void psdf(TVoxel& voxel, const Eigen::Vector4f& voxel_in_model_coo,
+					  const Eigen::Vector4f& projParams_d, float mu, int maxW,
+					  float* depth, const Eigen::Vector2i& depthImgSize,
+					  nodeGraph* _nodeGraph);
+
+			void psdfCore(TVoxel &voxel, const Eigen::Vector4f &projParams_d, Eigen::Matrix4d& T, const Eigen::Vector4f &pt_model,
+                          float mu, int maxW,
+                          float *depth, const Eigen::Vector2i &depthImgSize);
+
+			static long count;
+
 		};
+		template<class TVoxel, class TIndex>
+		long ITMDenseMapper<TVoxel, TIndex>::count = 0;
+		static omp_lock_t lock;
 	}
 }
 

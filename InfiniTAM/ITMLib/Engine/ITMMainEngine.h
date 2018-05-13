@@ -140,12 +140,9 @@ namespace ITMLib
 
 			~ITMMainEngine();
 
-
-            ITMScene<ITMVoxel, ITMVoxelIndex> *_warped_scene;
-            pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
             pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud;
-            void fetchCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *_warped_scene);
-            void fetchCloud_test(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *_warped_scene);
+//            void fetchCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *_warped_scene);
+//            void fetchCloud_test(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *_warped_scene);
 
 
 			/**********************************************************/
@@ -153,7 +150,9 @@ namespace ITMLib
 
             void boundingBox(pcl::PointCloud<pcl::PointXYZ>::Ptr cld);
 
+			void fetchCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *scene);
 
+			void fetchCloud_parallel(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *scene);
 
 		};
 	}

@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 project(InfiniTAM)
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
@@ -63,7 +64,7 @@ IF(MSVC_IDE)
   add_definitions(-DUSING_CMAKE=1)
 ELSE(MSVC_IDE)
   set(CFLAGS_WARN "-Wall -Wextra -Wno-unused-parameter -Wno-strict-aliasing")
-  #set(CMAKE_CXX_FLAGS "-fPIC -O3 -march=native ${CFLAGS_WARN} ${CMAKE_CXX_FLAGS}")  #这个是默认的
+#  set(CMAKE_CXX_FLAGS "-fPIC -O3 -march=native ${CFLAGS_WARN} ${CMAKE_CXX_FLAGS}")  #这个是默认的
   set(CMAKE_CXX_FLAGS "-fPIC -O0 -march=native ${CFLAGS_WARN} ${CMAKE_CXX_FLAGS}")
   #set(CMAKE_CXX_FLAGS "-fPIC -g ${CFLAGS_WARN} ${CMAKE_CXX_FLAGS}")
 ENDIF(MSVC_IDE)
@@ -113,4 +114,5 @@ add_executable(InfiniTAM InfiniTAM.cpp)
 target_link_libraries(InfiniTAM Engine)
 target_link_libraries(InfiniTAM ${PCL_LIBRARIES})
 target_link_libraries(InfiniTAM Utils)
+target_link_libraries(InfiniTAM libnabo.a gomp)
 

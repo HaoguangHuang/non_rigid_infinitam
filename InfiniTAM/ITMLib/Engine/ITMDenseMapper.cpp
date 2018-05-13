@@ -64,15 +64,15 @@ void ITMDenseMapper<TVoxel,TIndex>::ProcessFrame(const ITMView *view, const ITMT
 	}
 }
 
-template <class TVoxel, class TIndex>
-void ITMDenseMapper<TVoxel, TIndex>::_warped_ProcessFrame(const ITMView *view, const ITMTrackingState *trackingState,
-                                                          ITMScene<TVoxel, TIndex> *scene,
-                                                          ITMRenderState *renderState_live,
-                                                          pcl::PointCloud<pcl::PointXYZ>::Ptr warped_cloud,
-														  ITMScene<TVoxel, TIndex> *_warped_scene) {
-    //build a volume for warped_cloud
-    sceneRecoEngine->_warped_IntegrateIntoScene(scene, view, trackingState, renderState_live, warped_cloud,_warped_scene);
-}
+//template <class TVoxel, class TIndex>
+//void ITMDenseMapper<TVoxel, TIndex>::_warped_ProcessFrame(const ITMView *view, const ITMTrackingState *trackingState,
+//                                                          ITMScene<TVoxel, TIndex> *scene,
+//                                                          ITMRenderState *renderState_live,
+//                                                          pcl::PointCloud<pcl::PointXYZ>::Ptr warped_cloud,
+//														  ITMScene<TVoxel, TIndex> *_warped_scene) {
+//    //build a volume for warped_cloud
+//    sceneRecoEngine->_warped_IntegrateIntoScene(scene, view, trackingState, renderState_live, warped_cloud,_warped_scene);
+//}
 
 
 
@@ -84,3 +84,8 @@ void ITMDenseMapper<TVoxel,TIndex>::UpdateVisibleList(const ITMView *view, const
 }
 
 template class ITMLib::Engine::ITMDenseMapper<ITMVoxel, ITMVoxelIndex>;
+
+
+
+
+

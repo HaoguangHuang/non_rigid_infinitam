@@ -15,9 +15,9 @@ enum node_status{NODE_IN_TOP_LAYER, NODE_NOT_IN_TOP_LAYER};
 struct transformation{
     transformation(const transformation& T_i);
 
-    transformation(const Eigen::Matrix3f& R_i, const Eigen::Vector3f& t_i);
+    transformation(const Eigen::Matrix3d& R_i, const Eigen::Vector3f& t_i);
 
-    Eigen::Matrix3f R;
+    Eigen::Matrix3d R;
     Eigen::Vector3f t;
 };
 
@@ -29,7 +29,7 @@ public:
 
     node(const node&);
 
-    node(const Eigen::Vector3f& pos_i, const float w_i = 1, Eigen::Matrix3f R_i = Eigen::Matrix<float,3,3>::Identity(),
+    node(const Eigen::Vector3f& pos_i, const float w_i = 1, Eigen::Matrix3d R_i = Eigen::Matrix<double,3,3>::Identity(),
         Eigen::Vector3f t_i = Eigen::Vector3f(0,0,0));
 
     node(const Eigen::Vector3f& pos_i, const float& w_i, const transformation& T_i);

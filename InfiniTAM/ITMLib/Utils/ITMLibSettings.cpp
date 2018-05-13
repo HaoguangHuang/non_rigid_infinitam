@@ -90,7 +90,7 @@ ITMLibSettings::~ITMLibSettings()
 
 /*********************************************/
 ITMLibSettings::ITMLibSettings(float vol_size, unsigned int vol_resolution)
-		: sceneParams(0.02f, 100, vol_size/vol_resolution, 0.2f, 3.0f, false, vol_resolution) //the third one is voxel size    mu:0.02f
+		: sceneParams(0.02f*1000, 100, vol_size/vol_resolution, 0.2f, 3.0f, false, vol_resolution) //the third one is voxel size    mu:0.02f
 {
 	/// depth threashold for the ICP tracker
 	depthTrackerICPThreshold = 0.1f * 0.1f;
