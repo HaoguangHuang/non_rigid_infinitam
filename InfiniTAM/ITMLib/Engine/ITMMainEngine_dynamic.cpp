@@ -82,7 +82,7 @@ void ITMDenseMapper<TVoxel,TIndex>::integrateCanonicalVolume(const ITMView *view
 
     projParams_d = view->calib->intrinsics_d.projectionParamsSimple.all;
 
-    float mu = scene->sceneParams->mu; int maxW = scene->sceneParams->maxW;
+    float mu = scene->sceneParams->mu_mm; int maxW = scene->sceneParams->maxW;
 
     float *depth = view->depth->GetData(MEMORYDEVICE_CPU);
 
@@ -141,12 +141,10 @@ void ITMDenseMapper<TVoxel,TIndex>::psdf(TVoxel& voxel, const Eigen::Vector4f &v
 
     ///if find, get transformation T of input voxel under the influence of warp field
     if(haveKNN){
-
-//        count++;
         Eigen::Matrix4d T = _nodeGraph->warp(voxel_in_model, nodeIndice, dist2);
-//
-//        //tranform the input voxel from global coo into live camera coo by T
-//        //psdf update
+
+        //tranform the input voxel from global coo into live camera coo by T
+        //psdf update
         psdfCore(voxel, projParams_d, T, voxel_in_model_coo, mu, maxW, depth, depthImgSize);
     }
     else{

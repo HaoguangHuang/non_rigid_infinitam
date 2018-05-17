@@ -336,23 +336,22 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 		_nodeGraph->createNodeTree();
 		_nodeGraph->createNodeKDTree();
 
-
-        //integrate DepthImage into canonical volume
+        ///integrate DepthImage into canonical volume
 		denseMapper->integrateCanonicalVolume(view, scene, _nodeGraph);
 
         ///raycast canonical volume
+        trackingState->pose_d->SetFrom(0,0,0,0,0,0);
+        trackingState->pose_pointCloud->SetFrom(0,0,0,0,0,0);
+        trackingController->Prepare(trackingState, view, renderState_live);
 
-        //visualize canonical volume in GUI of canonical view and live view, represented in mesh format will be better.
-		// MarchingCubes
 
-        //perform fetchCloud in canonical volume
+        ///perform fetchCloud in canonical volume
 //		fetchCloud(extracted_cloud, scene);
 		fetchCloud_parallel(extracted_cloud, scene);
-
+//
         pcl::visualization::CloudViewer viewer("Cloud Viewer");
         viewer.showCloud(extracted_cloud);
         while(!viewer.wasStopped()){}
-
     }
     else{ //currentFrameNo >= 1
         //check nodeGraph needed to be updated or not

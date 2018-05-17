@@ -140,12 +140,11 @@ namespace ITMLib
 
 			~ITMMainEngine();
 
-            pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud;
+			/**********************************************************/
+			pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud;
 //            void fetchCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *_warped_scene);
 //            void fetchCloud_test(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *_warped_scene);
 
-
-			/**********************************************************/
 			void transformUVD2XYZ(pcl::PointCloud<pcl::PointXYZ>::Ptr cld, const ITMView*);
 
             void boundingBox(pcl::PointCloud<pcl::PointXYZ>::Ptr cld);
