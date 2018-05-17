@@ -118,33 +118,35 @@ void ITMDenseMapper<TVoxel,TIndex>::integrateCanonicalVolume(const ITMView *view
                                    view->calib->intrinsics_d.projectionParamsSimple.px,
                                    view->calib->intrinsics_d.projectionParamsSimple.py);
 
-        psdf(voxelArray[locId], voxel_in_model_coo, proj_param, mu, maxW, depth, depthImgSize_eigen, _nodeGraph);
+        psdf(voxelArray[locId], voxel_in_model_coo, proj_param, mu, maxW, depth, depthImgSize_eigen, _nodeGraph, locId);
 
     }
-
 }
 
 
 template<class TVoxel, class TIndex>
 void ITMDenseMapper<TVoxel,TIndex>::psdf(TVoxel& voxel, const Eigen::Vector4f &voxel_in_model_coo,
                                          const Eigen::Vector4f &projParams_d, float mu, int maxW,
-                                         float *depth, const Eigen::Vector2i &depthImgSize, nodeGraph* _nodeGraph){
+                                         float *depth, const Eigen::Vector2i &depthImgSize, nodeGraph* _nodeGraph, const int& locId){
     //find KNN nodeGraph of input voxel in nodeGraph
     Eigen::VectorXi nodeIndice(_nodeGraph->noKNN);
     Eigen::VectorXf dist2(_nodeGraph->noKNN);
 
     Eigen::Vector3f voxel_in_model(voxel_in_model_coo(0),voxel_in_model_coo(1),voxel_in_model_coo(2));
 
-//    bool haveKNN = _nodeGraph->findKNN(voxel_in_model, nodeIndice, dist2);
-    bool haveKNN = _nodeGraph->findKNN_naive(voxel_in_model, nodeIndice, dist2);
+//    bool haveKNN = _nodeGraph->findKNN(voxel_in_model, nodeIndice, dist2); //Use libnabo when find knn
+//    bool haveKNN = _nodeGraph->findKNN_naive(voxel_in_model, nodeIndice, dist2);//Without libnabo when find knn
+    //TODO: Here findKNN of warpField_dev can be only used when noKNN == 1.
+    bool haveKNN = _nodeGraph->findKNN_CUDA(locId, nodeIndice, dist2); //findKNN
 
-    //if find, get transformation T of input voxel under the influence of warp field
+    ///if find, get transformation T of input voxel under the influence of warp field
     if(haveKNN){
 
+//        count++;
         Eigen::Matrix4d T = _nodeGraph->warp(voxel_in_model, nodeIndice, dist2);
-
-        //tranform the input voxel from global coo into live camera coo by T
-        //psdf update
+//
+//        //tranform the input voxel from global coo into live camera coo by T
+//        //psdf update
         psdfCore(voxel, projParams_d, T, voxel_in_model_coo, mu, maxW, depth, depthImgSize);
     }
     else{
@@ -293,8 +295,6 @@ void ITMMainEngine::fetchCloud_parallel(pcl::PointCloud<pcl::PointXYZ>::Ptr extr
 
     Eigen::Vector3f translation_volumeCoo_to_liveFrameCoo(-volume_x*cell_size[0]/2, -volume_y*cell_size[1]/2, 0);
 
-    static omp_lock_t lock;
-    omp_init_lock(&lock);
 
 #pragma omp parallel for
     for(int locId = 0; locId < N; locId++){
@@ -333,12 +333,11 @@ void ITMMainEngine::fetchCloud_parallel(pcl::PointCloud<pcl::PointXYZ>::Ptr extr
 
             pcl::PointXYZ xyz(point[0], point[1], point[2]);
 
-//            omp_set_lock(&lock);
             extracted_cloud->push_back(xyz);
-//            omp_unset_lock(&lock);
+
         }
     }
-    omp_destroy_lock(&lock);  //销毁互斥器
+
 
 }
 

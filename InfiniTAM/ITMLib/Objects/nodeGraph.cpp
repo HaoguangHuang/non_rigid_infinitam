@@ -8,12 +8,13 @@
 #include "pcl/visualization/cloud_viewer.h"
 #include <Eigen/Eigenvalues>
 
+
 #include <numeric>
 #include <iostream>
 #include <sstream>
 #include <string>
 
-nodeGraph::nodeGraph(pcl::PointCloud<pcl::PointXYZ>::Ptr cld) {
+nodeGraph::nodeGraph(pcl::PointCloud<pcl::PointXYZ>::Ptr cld, const int volume_size, const float voxelsize) {
     node_mat.resize(Layers);
     maxRadiuFromNodeToPts2 = control_diameter[Layers-1]/2 * control_diameter[Layers-1]/2;
 
@@ -68,18 +69,33 @@ nodeGraph::nodeGraph(pcl::PointCloud<pcl::PointXYZ>::Ptr cld) {
 
     }/* for(int L = 0; L < Layers; L++) */
 
+    this->createNodeTree();
+    this->createNodeKDTree();
+
+    this->update_NodePosHost();
+
+    std::cout<<"this->node_mat[Layers-1].size()="<<this->node_mat[Layers-1].size()<<std::endl;
+
+    warpField_dev = new warpField_CUDA(this->node_mat[Layers-1].size(), volume_size, voxelsize, maxRadiuFromNodeToPts2);
+    warpField_dev->setNodePosFromHost2Device(nodePos_host, node_mat[Layers-1].size());
+    warpField_dev->updateWarpField();
+
 }
 
 
 nodeGraph::~nodeGraph() {
-//    delete control_radius;
-//    control_radius = NULL;
+    delete warpField_dev;
+    delete nodePos_host;
 
+    warpField_dev = NULL;
+    nodePos_host = NULL;
 }
+
 
 inline double computeDist(node node1, node node2){
     return (node1.pos - node2.pos).norm();
 }
+
 
 void nodeGraph::createNodeTree() {
     if(Layers < 2){
@@ -114,6 +130,22 @@ void nodeGraph::createNodeKDTree() {
         M(2,i) = node_mat[Layers-1][i].pos(2);
     }
     node_kdtree = Nabo::NNSearchF::createKDTreeLinearHeap(M);
+}
+
+
+void nodeGraph::update_NodePosHost() {
+    const int nodeNum = node_mat[Layers-1].size();
+
+//    if(nodePos_host != NULL){
+//        delete nodePos_host;
+//    }
+    nodePos_host = new float[3*nodeNum];
+
+    for(int n = 0; n < nodeNum; n++){
+        this->nodePos_host[3*n  ] = node_mat[Layers-1][n].pos(0);
+        this->nodePos_host[3*n+1] = node_mat[Layers-1][n].pos(1);
+        this->nodePos_host[3*n+2] = node_mat[Layers-1][n].pos(2);
+    }
 }
 
 
@@ -168,10 +200,18 @@ bool nodeGraph::findKNN_naive(const Eigen::Vector3f& voxel_in_model, Eigen::Vect
 }
 
 
+//TODO: now only compute the 1-NN of specified node
+bool nodeGraph::findKNN_CUDA(const int &locId, Eigen::VectorXi &nodeIndice, Eigen::VectorXf &dist2) {
+//    const short NNid = warpField_dev->intrivalNN(locId);
+    const short NNid = warpField_dev->data_host[locId];
 
-//inline float computeWeight(const Eigen::Vector3f& dg_v, const Eigen::Vector3f& x_c, const float& dg_w){
-//
-//}
+    nodeIndice(0) = NNid;
+    dist2(0) = 1; //TODO:...
+
+    if(NNid == -1) return false;
+    else return true;
+}
+
 
 Eigen::Matrix4d nodeGraph::warp(const Eigen::Vector3f& voxel_in_model, Eigen::VectorXi &nodeIndice, Eigen::VectorXf &dist2){
     Eigen::Matrix4d T = Eigen::Matrix4d::Identity();

@@ -100,6 +100,9 @@ Engine/DeviceSpecific/CUDA/ITMSwappingEngine_CUDA.cu
 Engine/DeviceSpecific/CUDA/ITMViewBuilder_CUDA.cu
 Engine/DeviceSpecific/CUDA/ITMVisualisationEngine_CUDA.cu
 Engine/DeviceSpecific/CUDA/ITMMeshingEngine_CUDA.cu
+
+
+Engine/DeviceSpecific/CUDA/warpField_CUDA.cu
 )
 
 set(ITMLIB_ENGINE_DEVICESPECIFIC_CUDA_HEADERS
@@ -114,6 +117,8 @@ Engine/DeviceSpecific/CUDA/ITMSwappingEngine_CUDA.h
 Engine/DeviceSpecific/CUDA/ITMViewBuilder_CUDA.h
 Engine/DeviceSpecific/CUDA/ITMVisualisationEngine_CUDA.h
 Engine/DeviceSpecific/CUDA/ITMMeshingEngine_CUDA.h
+
+Engine/DeviceSpecific/CUDA/warpField_CUDA.h
 )
 
 ##
@@ -212,10 +217,10 @@ if(WITH_CUDA)
   endforeach()
   include_directories(${CUDA_INCLUDE_DIRS})
   cuda_add_library(ITMLib
-	${ITMLIB_CPU_OBJECTS}
-	${ITMLIB_CUDA_OBJECTS}
-	${ITMLIB_COMMON_OBJECTS}
-	OPTIONS "${CUDA_ARCH_OPTIONS} --use_fast_math")
+          ${ITMLIB_CPU_OBJECTS}
+          ${ITMLIB_CUDA_OBJECTS}
+          ${ITMLIB_COMMON_OBJECTS}
+          OPTIONS "${CUDA_ARCH_OPTIONS} --use_fast_math")
   target_link_libraries(ITMLib ${CUDA_LIBRARY})
 else()
   add_definitions(-DCOMPILE_WITHOUT_CUDA)

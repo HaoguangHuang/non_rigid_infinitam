@@ -11,8 +11,8 @@
 #include "../Objects/ITMTrackingState.h"
 #include "../Objects/ITMRenderState.h"
 
-#include "pcl/io/pcd_io.h"
-#include "pcl/point_types.h"
+
+
 
 using namespace ITMLib::Objects;
 
@@ -50,10 +50,10 @@ namespace ITMLib
 			virtual void IntegrateIntoScene(ITMScene<TVoxel,TIndex> *scene, const ITMView *view, const ITMTrackingState *trackingState,
 				const ITMRenderState *renderState) = 0;
 
-			virtual
-			void _warped_IntegrateIntoScene(ITMScene<TVoxel, ITMPlainVoxelArray> *scene, const ITMView *view,
-				const ITMTrackingState *trackingState, const ITMRenderState *renderState, pcl::PointCloud<pcl::PointXYZ>::Ptr warped_cloud,
-											ITMScene<TVoxel, ITMPlainVoxelArray> *_warped_scene) = 0;
+//			virtual
+//			void _warped_IntegrateIntoScene(ITMScene<TVoxel, ITMPlainVoxelArray> *scene, const ITMView *view,
+//				const ITMTrackingState *trackingState, const ITMRenderState *renderState, pcl::PointCloud<pcl::PointXYZ>::Ptr warped_cloud,
+//											ITMScene<TVoxel, ITMPlainVoxelArray> *_warped_scene) = 0;
 
 
 			ITMSceneReconstructionEngine(void) { }

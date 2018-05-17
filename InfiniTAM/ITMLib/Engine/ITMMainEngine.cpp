@@ -332,9 +332,10 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 		ITMMainEngine::boundingBox(cld);
 
         ///initial nodeGraph
-		nodeGraph* _nodeGraph = new nodeGraph(cld);
+		nodeGraph* _nodeGraph = new nodeGraph(cld, scene->index.getVolumeSize().x, scene->sceneParams->voxelSize);
 		_nodeGraph->createNodeTree();
 		_nodeGraph->createNodeKDTree();
+
 
         //integrate DepthImage into canonical volume
 		denseMapper->integrateCanonicalVolume(view, scene, _nodeGraph);

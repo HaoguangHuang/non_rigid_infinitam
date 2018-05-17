@@ -102,7 +102,8 @@ ITMLibSettings::ITMLibSettings(float vol_size, unsigned int vol_resolution)
 	skipPoints = true;
 
 #ifndef COMPILE_WITHOUT_CUDA
-	deviceType = DEVICE_CUDA;
+///	deviceType = DEVICE_CUDA;
+	deviceType = DEVICE_CPU; //modify at 2018-0514-1633
 #else
 #ifdef COMPILE_WITH_METAL
 	deviceType = DEVICE_METAL;

@@ -12,23 +12,21 @@ macro(CANONIFY_BOOL var)
   endif()
 endmacro()
 
+find_package(CUDA QUIET)
 
 find_package(GLUT REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(PCL REQUIRED)
+###find_package(PCL REQUIRED)
 
-find_package(CUDA QUIET)
+
 CANONIFY_BOOL(CUDA_FOUND)
-CANONIFY_BOOL(PCL_FOUND)
-CANONIFY_BOOL(EIGEN_FOUND)
+
 ##################################
 #message("this is CUDA_FOUND----------------" ${CUDA_FOUND})
 #set(CUDA_FOUND FALSE)
 #message("this is CUDA_FOUND AFTER MODIFIED----------------" ${CUDA_FOUND})
 ##################################
-message(STATUS "CUDA found: " ${CUDA_FOUND})
-message(STATUS "PCL found: " ${PCL_FOUND})
-message(STATUS "Eigen found: " ${EIGEN_FOUND})
+
 #find_package(OpenNI QUIET)
 find_package(OpenNI QUIET)
 CANONIFY_BOOL(OPENNI_FOUND)
@@ -65,8 +63,8 @@ IF(MSVC_IDE)
 ELSE(MSVC_IDE)
   set(CFLAGS_WARN "-Wall -Wextra -Wno-unused-parameter -Wno-strict-aliasing")
 #  set(CMAKE_CXX_FLAGS "-fPIC -O3 -march=native ${CFLAGS_WARN} ${CMAKE_CXX_FLAGS}")  #这个是默认的
-  set(CMAKE_CXX_FLAGS "-fPIC -O0 -march=native ${CFLAGS_WARN} ${CMAKE_CXX_FLAGS}")
-  #set(CMAKE_CXX_FLAGS "-fPIC -g ${CFLAGS_WARN} ${CMAKE_CXX_FLAGS}")
+#  set(CMAKE_CXX_FLAGS "-fPIC -O0 -march=native ${CFLAGS_WARN} ${CMAKE_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "-fPIC -g ${CFLAGS_WARN} ${CMAKE_CXX_FLAGS}")
 ENDIF(MSVC_IDE)
 
 if(APPLE)
@@ -78,14 +76,19 @@ IF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libstdc++")
 ENDIF()
 
+
+find_package(PCL REQUIRED)
+CANONIFY_BOOL(PCL_FOUND)
+CANONIFY_BOOL(EIGEN_FOUND)
+
 #################################################
 include_directories("/usr/local/include/pcl-1.8")
-#include_directories(SYSTEM ${EIGEN_INCLUDE_DIRS})
+##include_directories(SYSTEM ${EIGEN_INCLUDE_DIRS})
 include_directories("/usr/include/eigen3")
-message("PCL_INCLUDE:" ${PCL_INCLUDE_DIRS})
+##message("PCL_INCLUDE:" ${PCL_INCLUDE_DIRS})
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
-add_definitions(${PCL_DEFINITIONS})
+#add_definitions(${PCL_DEFINITIONS})
 #################################################
 
 
@@ -94,16 +97,14 @@ add_subdirectory(ITMLib)
 add_subdirectory(Utils)
 add_subdirectory(Engine)
 
-########################################
+
 IF(WITH_CUDA)
   include_directories(${CUDA_INCLUDE_DIRS})
+  message('----------------------arrive here')
 ELSE()
   add_definitions(-DCOMPILE_WITHOUT_CUDA)
 ENDIF()
-#add by myself
-#include_directories(${CUDA_INCLUDE_DIRS})
-#add_definitions(-DCOMPILE_WITHOUT_CUDA)
-#######################################
+
 
 #set(PCL_LIB /usr/local/lib/libpcl_common.so /usr/local/lib/libpcl_io.so)
 
@@ -115,4 +116,7 @@ target_link_libraries(InfiniTAM Engine)
 target_link_libraries(InfiniTAM ${PCL_LIBRARIES})
 target_link_libraries(InfiniTAM Utils)
 target_link_libraries(InfiniTAM libnabo.a gomp)
+
+#############################################################################################################
+
 

@@ -66,7 +66,7 @@ namespace ITMLib
 			void psdf(TVoxel& voxel, const Eigen::Vector4f& voxel_in_model_coo,
 					  const Eigen::Vector4f& projParams_d, float mu, int maxW,
 					  float* depth, const Eigen::Vector2i& depthImgSize,
-					  nodeGraph* _nodeGraph);
+					  nodeGraph* _nodeGraph, const int& locId);
 
 			void psdfCore(TVoxel &voxel, const Eigen::Vector4f &projParams_d, Eigen::Matrix4d& T, const Eigen::Vector4f &pt_model,
                           float mu, int maxW,
@@ -77,7 +77,7 @@ namespace ITMLib
 		};
 		template<class TVoxel, class TIndex>
 		long ITMDenseMapper<TVoxel, TIndex>::count = 0;
-		static omp_lock_t lock;
+
 	}
 }
 

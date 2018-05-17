@@ -4,10 +4,12 @@
 
 #ifndef INFINITAM_NODEGRAPH_H
 
+#include "node.h"
+#include "../Engine/DeviceSpecific/CUDA/warpField_CUDA.h"
 
 #include "pcl/point_types.h"
 #include "pcl/point_cloud.h"
-#include "node.h"
+
 #include "nabo/nabo.h"
 
 #include <Eigen/Geometry>
@@ -16,7 +18,7 @@
 class nodeGraph{
 public:
     //create node tree
-    nodeGraph(pcl::PointCloud<pcl::PointXYZ>::Ptr cld);
+    explicit nodeGraph(pcl::PointCloud<pcl::PointXYZ>::Ptr cld, const int volume_size, const float voxelsize);
 
     //nodeGraph() = default;
     ~nodeGraph();
@@ -28,7 +30,8 @@ public:
     bool checkUpdateOrNot(pcl::PointCloud<pcl::PointXYZ>::Ptr cld);
 
     //incrementally update nodeGraph
-    void update();
+    //TODO:...
+    void updateNodeGraph();
 
     //create kdtree for nodes of the lowest layer
     void createNodeKDTree();
@@ -39,6 +42,9 @@ public:
     ///a version of findKNN without help of kdtree(libnabo)
     bool findKNN_naive(const Eigen::Vector3f& voxel_in_model, Eigen::VectorXi& nodeIndice, Eigen::VectorXf& dist2);
 
+    ///a GPU implementation of findKNN_naive
+    bool findKNN_CUDA(const int& locId, Eigen::VectorXi& nodeIndice, Eigen::VectorXf& dist2);
+
     //get Transformation of input point by warp field
     Eigen::Matrix4d warp(const Eigen::Vector3f& voxel_in_model, Eigen::VectorXi& nodeIndice, Eigen::VectorXf& dist2);
 
@@ -48,7 +54,14 @@ public:
  * */
     Eigen::Quaterniond QuaternionInterpolation(Eigen::VectorXf& weight, Eigen::MatrixXd& quaternion_mat);
 
+    ///Save node_mat[Layers-1] into array nodePos_host
+    void update_NodePosHost();
+
+
+
     vector<vector<node> > node_mat;//the first vector represents different hierarchical layer
+    float* nodePos_host;//1*(3*N)
+
     int currentFrameNo;
     static const unsigned short Layers = 4;
     const float control_diameter[Layers] = {2000,350,170,150};//mm {500,125,100,75}
@@ -60,9 +73,13 @@ public:
 
     Nabo::NNSearchF* node_kdtree;//nodes kdtree
 
-    Nabo::NNSearchF* voxel_tree;//3*(N*N*N)
+//    Nabo::NNSearchF* voxel_tree;//3*(N*N*N)
+//
+//    Eigen::VectorXi warpfield; //1*(N*N*N). warpfield[locId] restore the nearest node indice of the locId-th voxel
 
-    Eigen::VectorXi warpfield; //1*(N*N*N). warpfield[locId] restore the nearest node indice of the locId-th voxel
+    warpField_CUDA* warpField_dev;//1*(N*N*N). warpfield[locId] restore the nearest node indice of the locId-th voxel
+
+
 };
 
 
