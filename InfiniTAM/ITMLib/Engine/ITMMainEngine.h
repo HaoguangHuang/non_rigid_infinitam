@@ -141,7 +141,10 @@ namespace ITMLib
 			~ITMMainEngine();
 
 			/**********************************************************/
-			pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud;
+			pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud; //pointcloud in first frame camera coo
+			pcl::PointCloud<pcl::PointXYZ>::Ptr cld_lastFrame; //an extracted cloud after transforming into last frame
+			pcl::PointCloud<pcl::PointXYZ>::Ptr cld_OOR; //pointcloud that don't belong to any node
+
 //            void fetchCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *_warped_scene);
 //            void fetchCloud_test(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *_warped_scene);
 
@@ -153,6 +156,7 @@ namespace ITMLib
 
 			void fetchCloud_parallel(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *scene);
 
+			nodeGraph* _nodeGraph;
 		};
 	}
 }

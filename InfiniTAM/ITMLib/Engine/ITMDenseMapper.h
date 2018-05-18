@@ -57,8 +57,8 @@ namespace ITMLib
              * @voxel:used for SDF value and weight update in canonical volume
              * @voxel_in_model_coo:[x, y, z, 1]. voxel position in homogeneous format
              * @projParams_d:[fx, fy, cx, cy]
-             * @mu:truncated bandwidth. 20mm
-             * @maxW:128
+             * @mu:truncated bandwidth. 0.02m
+             * @maxW:100
              * @depth:depthMap. pixel in the i_th row, j_th col can be retrieved by depth[i*col+j]. Unit:mm
              * @depthImgSize:[640, 480]
              * @_nodeGraph
@@ -71,6 +71,14 @@ namespace ITMLib
 			void psdfCore(TVoxel &voxel, const Eigen::Vector4f &projParams_d, Eigen::Matrix4d& T, const Eigen::Vector4f &pt_model,
                           float mu, int maxW,
                           float *depth, const Eigen::Vector2i &depthImgSize);
+
+            /*
+             * @_nodeGraph
+             * @cld_lastFrame:extracted cloud from volume, and have already transformed into the last frame camera coo
+             * @cld_live:pointcloud back-projected from live depth map
+             * */
+            void hierarchicalICP(nodeGraph* _nodeGraph, pcl::PointCloud<pcl::PointXYZ>::Ptr cld_lastFrame,
+                                 pcl::PointCloud<pcl::PointXYZ>::Ptr cld_live);
 
 			static long count;
 

@@ -135,8 +135,9 @@ using namespace ITMLib::Engine;
 
 //imgSize_rgb:(640,480)
 ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib *calib, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string output_fname,
-							 Vector2i imgSize_rgb, Vector2i imgSize_d):extracted_cloud(new pcl::PointCloud<pcl::PointXYZ>){
-	//this->extracted_cloud->points.reserve(100000);
+							 Vector2i imgSize_rgb, Vector2i imgSize_d):extracted_cloud(new pcl::PointCloud<pcl::PointXYZ>),
+                                                                       cld_OOR(new pcl::PointCloud<pcl::PointXYZ>),
+                                                                       cld_lastFrame(new pcl::PointCloud<pcl::PointXYZ>){
 
 	// create all the things required for marching cubes and mesh extraction
 	// - uses additional memory (lots!)
@@ -206,7 +207,9 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 
 
 ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib *calib, Vector2i imgSize_rgb, Vector2i imgSize_d):
-        extracted_cloud(new pcl::PointCloud<pcl::PointXYZ>)
+        extracted_cloud(new pcl::PointCloud<pcl::PointXYZ>),
+        cld_OOR(new pcl::PointCloud<pcl::PointXYZ>),
+        cld_lastFrame(new pcl::PointCloud<pcl::PointXYZ>)
 {
     // create all the things required for marching cubes and mesh extraction
     // - uses additional memory (lots!)
@@ -324,15 +327,15 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	if (!mainProcessingActive) return;
 
 	///transform uvd to XYZ
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cld(new pcl::PointCloud<pcl::PointXYZ>);
-    ITMMainEngine::transformUVD2XYZ(cld, view);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cld_live(new pcl::PointCloud<pcl::PointXYZ>);
+    ITMMainEngine::transformUVD2XYZ(cld_live, view);
 
     if(currentFrameNo == 0){
 		///exclude outlier in the first frame
-		ITMMainEngine::boundingBox(cld);
+		ITMMainEngine::boundingBox(cld_live);
 
         ///initial nodeGraph
-		nodeGraph* _nodeGraph = new nodeGraph(cld, scene->index.getVolumeSize().x, scene->sceneParams->voxelSize);
+		_nodeGraph = new nodeGraph(cld_live, scene->index.getVolumeSize().x, scene->sceneParams->voxelSize);
 		_nodeGraph->createNodeTree();
 		_nodeGraph->createNodeKDTree();
 
@@ -344,35 +347,35 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
         trackingState->pose_pointCloud->SetFrom(0,0,0,0,0,0);
         trackingController->Prepare(trackingState, view, renderState_live);
 
-
         ///perform fetchCloud in canonical volume
 //		fetchCloud(extracted_cloud, scene);
 		fetchCloud_parallel(extracted_cloud, scene);
 //
-        pcl::visualization::CloudViewer viewer("Cloud Viewer");
-        viewer.showCloud(extracted_cloud);
-        while(!viewer.wasStopped()){}
+//        pcl::visualization::CloudViewer viewer("Cloud Viewer");
+//        viewer.showCloud(extracted_cloud);
+//        while(!viewer.wasStopped()){}
     }
     else{ //currentFrameNo >= 1
         //check nodeGraph needed to be updated or not
-
-            //update nodeGraph
+        if(_nodeGraph->checkUpdateOrNot(extracted_cloud, cld_OOR, cld_lastFrame)){
+            //update nodeGraph'
+            _nodeGraph->updateNodeGraph(extracted_cloud);
+        }
 
         //hierarchical ICP
+        denseMapper->hierarchicalICP(_nodeGraph, extracted_cloud, cld_live);
 
         //use warp field and psdf to integrate DepthImage into canonical volume(here we can refer to VolumeDeform)
+        denseMapper->integrateCanonicalVolume(view, scene, _nodeGraph);
 
         //perform fetchCloud in canonical volume
+        fetchCloud_parallel(extracted_cloud, scene);
 
         //use warp field to get live pointcloud model
 
         //raycast canonical volume
-
-        //visualize canonical volume in GUI of canonical view and live view, represented in mesh format will be better
-
+        trackingController->Prepare(trackingState, view, renderState_live);
     }
-
-
 
 #if 0
 	// tracking

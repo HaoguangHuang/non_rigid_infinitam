@@ -195,7 +195,6 @@ void ITMDenseMapper<TVoxel,TIndex>::psdfCore(TVoxel &voxel, const Eigen::Vector4
     //write back
     voxel.sdf = TVoxel::SDF_floatToValue(newF);
     voxel.w_depth = newW;
-
 }
 
 
@@ -338,5 +337,6 @@ void ITMMainEngine::fetchCloud_parallel(pcl::PointCloud<pcl::PointXYZ>::Ptr extr
 
 
 }
+
 
 

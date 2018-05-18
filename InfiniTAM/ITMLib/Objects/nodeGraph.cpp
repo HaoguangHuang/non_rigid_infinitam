@@ -17,6 +17,7 @@
 nodeGraph::nodeGraph(pcl::PointCloud<pcl::PointXYZ>::Ptr cld, const int volume_size, const float voxelsize) {
     node_mat.resize(Layers);
     maxRadiuFromNodeToPts2 = control_diameter[Layers-1]/2 * control_diameter[Layers-1]/2;
+    haveUpdateGraph = false;
 
     for(int L = 0; L < Layers; L++){
         if(L == 0){
@@ -109,7 +110,7 @@ void nodeGraph::createNodeTree() {
             for(short node_father = 0; node_father < node_mat[L_son-1].size(); node_father++){
                 //process node_father and node_son
                 double curr_dist = computeDist(node_mat[L_son][node_son], node_mat[L_son-1][node_father]);
-                if(curr_dist < dist){
+                if(curr_dist < dist){ //TODO:Here cannot confirm that every node can own a father-node
                     dist = curr_dist;
                     node_mat[L_son][node_son].father_id = node_father;
                 }
@@ -129,6 +130,7 @@ void nodeGraph::createNodeKDTree() {
         M(1,i) = node_mat[Layers-1][i].pos(1);
         M(2,i) = node_mat[Layers-1][i].pos(2);
     }
+
     node_kdtree = Nabo::NNSearchF::createKDTreeLinearHeap(M);
 }
 
@@ -279,4 +281,95 @@ Eigen::Quaterniond nodeGraph::QuaternionInterpolation(Eigen::VectorXf& weight, E
 
     //FOR Quaterniond constructor func, its input parameters correspond to (w,x,y,z) in order.
     return Eigen::Quaterniond(eigVec(0).real(), eigVec(1).real(),eigVec(2).real(),eigVec(3).real());
+}
+
+
+inline pcl::PointXYZ getCloudLive(const Eigen::Matrix3f& R, const Eigen::Vector3f& t, const pcl::PointXYZ& cld_in){
+    Eigen::Vector3f pts_in(cld_in.x, cld_in.y, cld_in.z);
+    Eigen::Vector3f pts_out = R * pts_in + t;
+
+    pcl::PointXYZ cld_out(pts_out(0),pts_out(1),pts_out(2));
+
+    return cld_out;
+}
+
+
+///count the number of pointcloud that belonging to no nodes within specified radius
+//use warpField to approximate
+bool nodeGraph::checkUpdateOrNot(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cld,
+                                 pcl::PointCloud<pcl::PointXYZ>::Ptr cld_OOR,
+                                 pcl::PointCloud<pcl::PointXYZ>::Ptr cld_lastFrame) {
+    if(!cld_OOR->empty())
+        cld_OOR->clear();
+
+    if(!cld_lastFrame->empty())
+        cld_lastFrame->clear();
+
+    int cnt = 0;
+    const int volume_size = warpField_dev->warpField_size;
+    const float voxelSize = warpField_dev->voxelSize;
+    const float scale = voxelSize * 1000.0f;
+    const int half_volume_size = volume_size / 2;
+
+//TODO:pragma omp parallel
+    for(int i = 0; i < extracted_cld->size(); i++){
+        const float x = extracted_cld->points[i].x; //mm
+        const float y = extracted_cld->points[i].y; //mm
+        const float z = extracted_cld->points[i].z; //mm
+
+//        const int X = x / 1000.0f / voxelSize + volume_size / 2;
+//        const int Y = y / 1000.0f / voxelSize + volume_size / 2;
+//        const int Z = z / 1000.0f / voxelSize;
+        const int X = x / scale + half_volume_size;
+        const int Y = y / scale + half_volume_size;
+        const int Z = z / scale;
+
+        if(X < 0 || Y < 0 || Z < 0 || X > volume_size || Y > volume_size || Z > volume_size){
+            std::cout<<"compute locId failed!"<< std::endl;
+            continue;
+        }
+
+        //transform extracted cloud from model coo into last frame coo
+        const int locId = Z * volume_size * volume_size + Y *volume_size + X;
+        const NNid = warpField_dev->data_host[locId];
+        if(NNid == -1){
+            cnt++;
+            ///points without nearest node within specified control radius, should use transformation of the node from the lowest layer
+            Eigen::Matrix3f R = this->node_mat[0][0].T_mat.back().R;
+            Eigen::Vector3f t = this->node_mat[0][0].T_mat.back().t;
+            cld_lastFrame->push_back(getCloudLive(R, t, extracted_cld->points[i]));
+        }
+        else{ //NNid >= 0
+            Eigen::Matrix3f R = this->node_mat[Layers-1][NNid].T_mat.back().R;
+            Eigen::Vector3f t = this->node_mat[Layers-1][NNid].T_mat.back().t;
+            cld_lastFrame->push_back(getCloudLive(R, t, extracted_cld->points[i]));
+        }
+    }
+
+    if(cnt > OOR_thres) return true;
+    else return false;
+}
+
+
+void nodeGraph::updateNodeGraph(pcl::PointCloud<pcl::PointXYZ>::Ptr cld_OOR) {
+    ///perform downsample in cld_OOR, get the new nodes of the every layer
+    for(int L = 1; L < Layers; L++){ //do nothing in the lowest layer
+        float leafsize = control_diameter[L];
+
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cld_filtered(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::VoxelGrid<pcl::PointXYZ> sor;
+        sor.setInputCloud(cld_OOR);
+        sor.setLeafSize(leafsize, leafsize, leafsize);
+        sor.filter(*cld_filtered);
+
+        for(int i = 0; i < cld_filtered->size(); i++){
+            Eigen::Vector3f pts(cld_filtered->points[i].x,cld_filtered->points[i].y,cld_filtered->points[i].z);
+            node _node(pts);
+            _node.status = NODE_NOT_IN_TOP_LAYER; _node.father_id = -1;
+            node_mat[L].push_back(_node);
+        }
+    }
+
+    this->createNodeTree();
+    this->createNodeKDTree();
 }

@@ -26,12 +26,22 @@ public:
     //find relationship between higher layer nodes and those in lower layer
     void createNodeTree();
 
-    //check current nodeGraph needed to be updated or not
-    bool checkUpdateOrNot(pcl::PointCloud<pcl::PointXYZ>::Ptr cld);
+    /*check current nodeGraph needed to be updated or not. If the number of points, that
+     * don't belong to any nodes within control radius, is larger than OOR_thres, the nodeGraph
+     * need to update.
+     *
+     * @extracted_cld:pointcloud that extracted from canonical volume
+     * @cld_OOR:pointcloud that don't belong to any nodes
+     * */
+    bool checkUpdateOrNot(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cld,
+                          pcl::PointCloud<pcl::PointXYZ>::Ptr cld_OOR,
+                          pcl::PointCloud<pcl::PointXYZ>::Ptr cld_lastFrame);
 
-    //incrementally update nodeGraph
-    //TODO:...
-    void updateNodeGraph();
+    /*incrementally update nodeGraph
+     *
+     * @cld_OOR:pointcloud that don't belong to any nodes
+     * */
+    void updateNodeGraph(pcl::PointCloud<pcl::PointXYZ>::Ptr cld_OOR);
 
     //create kdtree for nodes of the lowest layer
     void createNodeKDTree();
@@ -72,6 +82,7 @@ public:
     float maxRadiuFromNodeToPts2;//control_diameter[Layers-1]/2;
 
     Nabo::NNSearchF* node_kdtree;//nodes kdtree
+    bool haveUpdateGraph;
 
 //    Nabo::NNSearchF* voxel_tree;//3*(N*N*N)
 //
