@@ -183,7 +183,9 @@ ${ITMLIB_UTILS_HEADERS}
 set(ITMLIB_CPU_OBJECTS
 ${ITMLIB_ENGINE_DEVICESPECIFIC_CPU_SOURCES}
 ${ITMLIB_ENGINE_DEVICESPECIFIC_CPU_HEADERS}
-        Objects/nodeGraph.h Objects/node.h Objects/nodeGraph.cpp Objects/node.cpp)
+        Objects/nodeGraph.h Objects/node.h
+        Objects/nodeGraph.cpp Objects/node.cpp
+        Objects/TimeWatcher.h Objects/TimeWatcher.cpp)
 
 set(ITMLIB_CUDA_OBJECTS
 ${ITMLIB_ENGINE_DEVICESPECIFIC_CUDA_SOURCES}

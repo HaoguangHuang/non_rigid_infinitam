@@ -10,6 +10,7 @@
 #include "pcl/point_types.h"
 #include "pcl/io/pcd_io.h"
 #include "pcl/point_cloud.h"
+#include "../Objects/TimeWatcher.h"
 
 /** \mainpage
     This is the API reference documentation for InfiniTAM. For a general
@@ -157,6 +158,7 @@ namespace ITMLib
 			void fetchCloud_parallel(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *scene);
 
 			nodeGraph* _nodeGraph;
+            TimeWatcher* _TimeWatcher;
 		};
 	}
 }

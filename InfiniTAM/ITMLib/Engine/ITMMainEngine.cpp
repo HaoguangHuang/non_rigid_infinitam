@@ -4,6 +4,7 @@
 #include "pcl/visualization/cloud_viewer.h"
 #include "../Objects/nodeGraph.h"
 #include "./ITMMainEngine_dynamic.cpp"
+#include "../Objects/TimeWatcher.cpp"
 #include <sstream>
 
 
@@ -141,6 +142,8 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
                                                                        cld_OOR(new pcl::PointCloud<pcl::PointXYZ>),
                                                                        cld_lastFrame(new pcl::PointCloud<pcl::PointXYZ>){
 
+    _TimeWatcher = new TimeWatcher();
+
 	// create all the things required for marching cubes and mesh extraction
 	// - uses additional memory (lots!)
 	static const bool createMeshingEngine = true;
@@ -213,6 +216,9 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
         cld_OOR(new pcl::PointCloud<pcl::PointXYZ>),
         cld_lastFrame(new pcl::PointCloud<pcl::PointXYZ>)
 {
+
+    _TimeWatcher = new TimeWatcher();
+
     // create all the things required for marching cubes and mesh extraction
     // - uses additional memory (lots!)
     static const bool createMeshingEngine = true;
@@ -332,7 +338,6 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
     pcl::PointCloud<pcl::PointXYZ>::Ptr cld_live(new pcl::PointCloud<pcl::PointXYZ>);
     ITMMainEngine::transformUVD2XYZ(cld_live, view);
 
-    std::cout<<"Now processing frame "<<currentFrameNo<<" !"<<std::endl;
 
     if(currentFrameNo == 0){
 		///exclude outlier in the first frame
@@ -340,21 +345,30 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 
         ///initial nodeGraph
 		_nodeGraph = new nodeGraph(cld_live, scene->index.getVolumeSize().x, scene->sceneParams->voxelSize);
+
+        _TimeWatcher->TIC(CREATE_NODETREE);
 		_nodeGraph->createNodeTree();
 		_nodeGraph->createNodeKDTree();
+        _TimeWatcher->TOC(CREATE_NODETREE);
 
         ///integrate DepthImage into canonical volume
+        _TimeWatcher->TIC(INTEGRATE_VOLUME);
 		denseMapper->integrateCanonicalVolume(view, scene, _nodeGraph);
+        _TimeWatcher->TOC(INTEGRATE_VOLUME);
 
         ///raycast canonical volume
         trackingState->pose_d->SetFrom(0,0,0,0,0,0);
         trackingState->pose_pointCloud->SetFrom(0,0,0,0,0,0);
+        _TimeWatcher->TIC(RAYCAST);
         trackingController->Prepare(trackingState, view, renderState_live);
+        _TimeWatcher->TOC(RAYCAST);
 
         ///perform fetchCloud in canonical volume
 //		fetchCloud(extracted_cloud, scene);
+        _TimeWatcher->TIC(FETCH_CLOUD);
 		fetchCloud_parallel(extracted_cloud, scene);
-//
+        _TimeWatcher->TOC(FETCH_CLOUD);
+
 //        pcl::visualization::CloudViewer viewer("Cloud Viewer");
 //        viewer.showCloud(extracted_cloud);
 //        while(!viewer.wasStopped()){}
@@ -363,21 +377,34 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
         //check nodeGraph needed to be updated or not
         if(_nodeGraph->checkUpdateOrNot(extracted_cloud, cld_OOR, cld_lastFrame)){
             //update nodeGraph'
+            _TimeWatcher->TIC(CREATE_NODETREE);
             _nodeGraph->updateNodeGraph(extracted_cloud);
+            _TimeWatcher->TOC(CREATE_NODETREE);
+            printf("updated nodeGraph successfully! Now have %d nodes in highest layer!\n",_nodeGraph->node_mat.back().size());
         }
 
         //hierarchical ICP
+        _TimeWatcher->TIC(HIERARCHICAL_ICP);
         denseMapper->hierarchicalICP(_nodeGraph, cld_lastFrame, cld_live);
+        _TimeWatcher->TOC(HIERARCHICAL_ICP);
 
         //use warp field and psdf to integrate DepthImage into canonical volume(here we can refer to VolumeDeform)
+        _TimeWatcher->TIC(INTEGRATE_VOLUME);
         denseMapper->integrateCanonicalVolume(view, scene, _nodeGraph);
+        _TimeWatcher->TOC(INTEGRATE_VOLUME);
 
         //perform fetchCloud in canonical volume
+        _TimeWatcher->TIC(FETCH_CLOUD);
         fetchCloud_parallel(extracted_cloud, scene);
+        _TimeWatcher->TOC(FETCH_CLOUD);
 
         //raycast canonical volume
+        _TimeWatcher->TIC(RAYCAST);
         trackingController->Prepare(trackingState, view, renderState_live);
+        _TimeWatcher->TOC(RAYCAST);
     }
+
+    _TimeWatcher->showTimeCost();
 
     if(currentFrameNo % 25 == 0){
         ///save extracted_cloud

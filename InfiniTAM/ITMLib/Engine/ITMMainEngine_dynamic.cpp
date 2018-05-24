@@ -8,7 +8,8 @@
 #include "../Objects/nodeGraph.cpp"
 #include "pcl/kdtree/kdtree_flann.h"
 #include "pcl/registration/icp.h"
-#include "pcl/registration/ia_ransac.h"
+//#include "pcl/registration/ia_ransac.h"
+
 
 #include <iostream>
 
