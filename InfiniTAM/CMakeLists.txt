@@ -78,8 +78,11 @@ ENDIF()
 
 
 find_package(PCL REQUIRED)
+#find_package(libpointmatcher REQUIRED)
 CANONIFY_BOOL(PCL_FOUND)
 CANONIFY_BOOL(EIGEN_FOUND)
+
+#include_directories(${CMAKE_CURRENT_BINARY_DIR} ${libpointmatcher_INCLUDE_DIRS})
 
 #################################################
 include_directories("/usr/local/include/pcl-1.8")
@@ -116,7 +119,7 @@ target_link_libraries(InfiniTAM Engine)
 target_link_libraries(InfiniTAM ${PCL_LIBRARIES})
 target_link_libraries(InfiniTAM Utils)
 target_link_libraries(InfiniTAM libnabo.a gomp)
-
+#target_link_libraries(${PROJECT_NAME} ${libpointmatcher_LIBRARIES})
 #############################################################################################################
 
 

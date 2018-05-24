@@ -47,29 +47,29 @@ public:
     void createNodeKDTree();
 
     //find knn of input point within maxRadiuFromNode2pts
-    bool findKNN(const Eigen::Vector3f& voxel_in_model, Eigen::VectorXi& nodeIndice, Eigen::VectorXf& dist2);
+    bool findKNN(const Eigen::Vector3d& voxel_in_model, Eigen::VectorXi& nodeIndice, Eigen::VectorXd& dist2);
 
     ///a version of findKNN without help of kdtree(libnabo)
-    bool findKNN_naive(const Eigen::Vector3f& voxel_in_model, Eigen::VectorXi& nodeIndice, Eigen::VectorXf& dist2);
+    bool findKNN_naive(const Eigen::Vector3d& voxel_in_model, Eigen::VectorXi& nodeIndice, Eigen::VectorXd& dist2);
 
     ///a GPU implementation of findKNN_naive
-    bool findKNN_CUDA(const int& locId, Eigen::VectorXi& nodeIndice, Eigen::VectorXf& dist2);
+    bool findKNN_CUDA(const int& locId, Eigen::VectorXi& nodeIndice, Eigen::VectorXd& dist2);
 
     //get Transformation of input point by warp field
-    Eigen::Matrix4d warp(const Eigen::Vector3f& voxel_in_model, Eigen::VectorXi& nodeIndice, Eigen::VectorXf& dist2);
+    Eigen::Matrix4d warp(const Eigen::Vector3d& voxel_in_model, Eigen::VectorXi& nodeIndice, Eigen::VectorXd& dist2);
 
  /*
  * Paper:Markey-2017-Quaternion Averaging
  * Link: https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20070017872.pdf
  * */
-    Eigen::Quaterniond QuaternionInterpolation(Eigen::VectorXf& weight, Eigen::MatrixXd& quaternion_mat);
+    Eigen::Quaterniond QuaternionInterpolation(Eigen::VectorXd& weight, Eigen::MatrixXd& quaternion_mat);
 
     ///Save node_mat[Layers-1] into array nodePos_host
     void update_NodePosHost();
 
 
 
-    vector<vector<node> > node_mat;//the first vector represents different hierarchical layer
+    vector<vector<node> > node_mat;//the first vector represents different hierarchical layer.
     float* nodePos_host;//1*(3*N)
 
     int currentFrameNo;
@@ -81,7 +81,7 @@ public:
     const int noKNN = 1;
     float maxRadiuFromNodeToPts2;//control_diameter[Layers-1]/2;
 
-    Nabo::NNSearchF* node_kdtree;//nodes kdtree
+    Nabo::NNSearchD* node_kdtree;//nodes kdtree
     bool haveUpdateGraph;
 
 //    Nabo::NNSearchF* voxel_tree;//3*(N*N*N)

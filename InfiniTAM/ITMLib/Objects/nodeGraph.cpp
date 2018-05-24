@@ -23,7 +23,7 @@ nodeGraph::nodeGraph(pcl::PointCloud<pcl::PointXYZ>::Ptr cld, const int volume_s
         if(L == 0){
             Eigen::Vector4f centroid;
             pcl::compute3DCentroid(*cld, centroid);
-            Eigen::Vector3f pc_center(centroid[0],centroid[1],centroid[2]);
+            Eigen::Vector3d pc_center(centroid[0],centroid[1],centroid[2]);
             node _node(pc_center); _node.status = NODE_IN_TOP_LAYER; _node.father_id = -1;
 
             node_mat[0].push_back(_node);
@@ -38,7 +38,7 @@ nodeGraph::nodeGraph(pcl::PointCloud<pcl::PointXYZ>::Ptr cld, const int volume_s
             sor.filter(*cld_filtered);
 
             for(int i = 0; i < cld_filtered->size(); i++){
-                Eigen::Vector3f pts(cld_filtered->points[i].x,cld_filtered->points[i].y,cld_filtered->points[i].z);
+                Eigen::Vector3d pts(cld_filtered->points[i].x,cld_filtered->points[i].y,cld_filtered->points[i].z);
                 node _node(pts);
                 if(L == 0){ _node.status = NODE_IN_TOP_LAYER; _node.father_id = -1;}
                 else {_node.status = NODE_NOT_IN_TOP_LAYER; _node.father_id = -1;}
@@ -110,7 +110,7 @@ void nodeGraph::createNodeTree() {
             for(short node_father = 0; node_father < node_mat[L_son-1].size(); node_father++){
                 //process node_father and node_son
                 double curr_dist = computeDist(node_mat[L_son][node_son], node_mat[L_son-1][node_father]);
-                if(curr_dist < dist){ //TODO:Here cannot confirm that every node can own a father-node
+                if(curr_dist < dist){ //TODO:Here is not suitable to confirm that every node can own a father-node
                     dist = curr_dist;
                     node_mat[L_son][node_son].father_id = node_father;
                 }
@@ -122,7 +122,7 @@ void nodeGraph::createNodeTree() {
 
 void nodeGraph::createNodeKDTree() {
     const int nodeNum = node_mat[Layers-1].size();
-    Eigen::MatrixXf M;
+    Eigen::MatrixXd M;
     M.resize(3,nodeNum);
 
     for(int i = 0; i < nodeNum; i++){
@@ -131,7 +131,7 @@ void nodeGraph::createNodeKDTree() {
         M(2,i) = node_mat[Layers-1][i].pos(2);
     }
 
-    node_kdtree = Nabo::NNSearchF::createKDTreeLinearHeap(M);
+    node_kdtree = Nabo::NNSearchD::createKDTreeLinearHeap(M);
 }
 
 
@@ -151,15 +151,15 @@ void nodeGraph::update_NodePosHost() {
 }
 
 
-bool nodeGraph::findKNN(const Eigen::Vector3f& voxel_in_model, Eigen::VectorXi &nodeIndice, Eigen::VectorXf &dist2) {
+bool nodeGraph::findKNN(const Eigen::Vector3d& voxel_in_model, Eigen::VectorXi &nodeIndice, Eigen::VectorXd &dist2) {
     const int K = noKNN;
-    Eigen::VectorXf voxel_pos = voxel_in_model;
-    node_kdtree->knn(voxel_pos, nodeIndice, dist2, K);
+//    Eigen::VectorXd voxel_pos = voxel_in_model;
+    node_kdtree->knn(voxel_in_model, nodeIndice, dist2, K);
 
     //exclude nodes that exceed control diameter from nodeIndice
     //TVoxel == ITMVoxel_s == ITMVoxel
     Eigen::VectorXi nodeIndice_filtered(K);
-    Eigen::VectorXf dist2_filtered(K);
+    Eigen::VectorXd dist2_filtered(K);
 
     int cnt = 0;
     for(int i = 0; i < dist2.size(); i++){
@@ -181,13 +181,13 @@ bool nodeGraph::findKNN(const Eigen::Vector3f& voxel_in_model, Eigen::VectorXi &
 
 
 //TODO: now only compute the 1-NN of specified node
-bool nodeGraph::findKNN_naive(const Eigen::Vector3f& voxel_in_model, Eigen::VectorXi &nodeIndice, Eigen::VectorXf &dist2){
+bool nodeGraph::findKNN_naive(const Eigen::Vector3d& voxel_in_model, Eigen::VectorXi &nodeIndice, Eigen::VectorXd &dist2){
     const int K = noKNN;
     double min_dist = std::numeric_limits<double>::max();
     const int nodeNum = node_mat[Layers-1].size();
 
     for(int n = 0; n < nodeNum; n++){
-        double diff = (node_mat[Layers-1][n].pos - voxel_in_model).norm();
+        double diff = (node_mat[Layers-1][n].pos - voxel_in_model.cast<double>()).norm();
         if(diff < min_dist) {
             min_dist = diff;
             nodeIndice(0) = n;
@@ -203,7 +203,7 @@ bool nodeGraph::findKNN_naive(const Eigen::Vector3f& voxel_in_model, Eigen::Vect
 
 
 //TODO: now only compute the 1-NN of specified node
-bool nodeGraph::findKNN_CUDA(const int &locId, Eigen::VectorXi &nodeIndice, Eigen::VectorXf &dist2) {
+bool nodeGraph::findKNN_CUDA(const int &locId, Eigen::VectorXi &nodeIndice, Eigen::VectorXd &dist2) {
 //    const short NNid = warpField_dev->intrivalNN(locId);
     const short NNid = warpField_dev->data_host[locId];
 
@@ -215,28 +215,28 @@ bool nodeGraph::findKNN_CUDA(const int &locId, Eigen::VectorXi &nodeIndice, Eige
 }
 
 
-Eigen::Matrix4d nodeGraph::warp(const Eigen::Vector3f& voxel_in_model, Eigen::VectorXi &nodeIndice, Eigen::VectorXf &dist2){
+Eigen::Matrix4d nodeGraph::warp(const Eigen::Vector3d& voxel_in_model, Eigen::VectorXi &nodeIndice, Eigen::VectorXd &dist2){
     Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
     const int N = nodeIndice.size(); //KNN number of this voxel
 
     if(N == 1){
         //when pts only have one nearest node, its transformation will be equal to that of nearest node.
         Eigen::Matrix3d R = this->node_mat[Layers-1][nodeIndice(0)].T_mat.back().R;
-        Eigen::Vector3f t = this->node_mat[Layers-1][nodeIndice(0)].T_mat.back().t;
+        Eigen::Vector3d t = this->node_mat[Layers-1][nodeIndice(0)].T_mat.back().t;
         T(0,0) = R(0,0); T(0,1) = R(0,1); T(0,2) = R(0,2); T(0,3) = t(0);
         T(1,0) = R(1,0); T(1,1) = R(1,1); T(1,2) = R(1,2); T(1,3) = t(1);
         T(2,0) = R(2,0); T(2,1) = R(2,1); T(2,2) = R(2,2); T(2,3) = t(2);
     }
     else{
         //compute normalized weight
-        Eigen::VectorXf weight;
+        Eigen::VectorXd weight;
         weight.resize(N);
         for(int i = 0; i < N; i++){
             weight(i) = this->node_mat[Layers-1][nodeIndice(i)].compute_control_extent(voxel_in_model);
         }
         weight = weight / weight.sum();
 
-        Eigen::Vector3f t_avg(0,0,0);
+        Eigen::Vector3d t_avg(0,0,0);
         Eigen::MatrixXd quaternion_mat;
         quaternion_mat.resize(N, 4);
         for(int i = 0; i < N; i++){
@@ -245,7 +245,7 @@ Eigen::Matrix4d nodeGraph::warp(const Eigen::Vector3f& voxel_in_model, Eigen::Ve
             quaternion_mat(i,0) = q4.w(); quaternion_mat(i,1) = q4.x();
             quaternion_mat(i,2) = q4.y(); quaternion_mat(i,3) = q4.z();
 
-            Eigen::Vector3f t = this->node_mat[Layers-1][nodeIndice(i)].T_mat.back().t;
+            Eigen::Vector3d t = this->node_mat[Layers-1][nodeIndice(i)].T_mat.back().t;
             t_avg += t * weight(i);
 
         }
@@ -264,7 +264,7 @@ Eigen::Matrix4d nodeGraph::warp(const Eigen::Vector3f& voxel_in_model, Eigen::Ve
 }
 
 
-Eigen::Quaterniond nodeGraph::QuaternionInterpolation(Eigen::VectorXf& weight, Eigen::MatrixXd& quaternion_mat){
+Eigen::Quaterniond nodeGraph::QuaternionInterpolation(Eigen::VectorXd& weight, Eigen::MatrixXd& quaternion_mat){
     Eigen::Matrix4d M = Eigen::Matrix4d::Zero();
     const int N = weight.size(); //KNN number of this voxel
     for(int i = 0; i < N; i++){
@@ -284,9 +284,9 @@ Eigen::Quaterniond nodeGraph::QuaternionInterpolation(Eigen::VectorXf& weight, E
 }
 
 
-inline pcl::PointXYZ getCloudLive(const Eigen::Matrix3f& R, const Eigen::Vector3f& t, const pcl::PointXYZ& cld_in){
-    Eigen::Vector3f pts_in(cld_in.x, cld_in.y, cld_in.z);
-    Eigen::Vector3f pts_out = R * pts_in + t;
+inline pcl::PointXYZ getCloudLive(const Eigen::Matrix3d& R, const Eigen::Vector3d& t, const pcl::PointXYZ& cld_in){
+    Eigen::Vector3d pts_in(cld_in.x, cld_in.y, cld_in.z);
+    Eigen::Vector3d pts_out = R * pts_in + t;
 
     pcl::PointXYZ cld_out(pts_out(0),pts_out(1),pts_out(2));
 
@@ -311,7 +311,7 @@ bool nodeGraph::checkUpdateOrNot(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_c
     const float scale = voxelSize * 1000.0f;
     const int half_volume_size = volume_size / 2;
 
-//TODO:pragma omp parallel
+//TODO:pragma omp parallel for
     for(int i = 0; i < extracted_cld->size(); i++){
         const float x = extracted_cld->points[i].x; //mm
         const float y = extracted_cld->points[i].y; //mm
@@ -331,17 +331,17 @@ bool nodeGraph::checkUpdateOrNot(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_c
 
         //transform extracted cloud from model coo into last frame coo
         const int locId = Z * volume_size * volume_size + Y *volume_size + X;
-        const NNid = warpField_dev->data_host[locId];
+        const int NNid = warpField_dev->data_host[locId];
         if(NNid == -1){
             cnt++;
             ///points without nearest node within specified control radius, should use transformation of the node from the lowest layer
-            Eigen::Matrix3f R = this->node_mat[0][0].T_mat.back().R;
-            Eigen::Vector3f t = this->node_mat[0][0].T_mat.back().t;
+            Eigen::Matrix3d R = this->node_mat[0][0].T_mat.back().R;
+            Eigen::Vector3d t = this->node_mat[0][0].T_mat.back().t;
             cld_lastFrame->push_back(getCloudLive(R, t, extracted_cld->points[i]));
         }
         else{ //NNid >= 0
-            Eigen::Matrix3f R = this->node_mat[Layers-1][NNid].T_mat.back().R;
-            Eigen::Vector3f t = this->node_mat[Layers-1][NNid].T_mat.back().t;
+            Eigen::Matrix3d R = this->node_mat[Layers-1][NNid].T_mat.back().R;
+            Eigen::Vector3d t = this->node_mat[Layers-1][NNid].T_mat.back().t;
             cld_lastFrame->push_back(getCloudLive(R, t, extracted_cld->points[i]));
         }
     }
@@ -363,7 +363,7 @@ void nodeGraph::updateNodeGraph(pcl::PointCloud<pcl::PointXYZ>::Ptr cld_OOR) {
         sor.filter(*cld_filtered);
 
         for(int i = 0; i < cld_filtered->size(); i++){
-            Eigen::Vector3f pts(cld_filtered->points[i].x,cld_filtered->points[i].y,cld_filtered->points[i].z);
+            Eigen::Vector3d pts(cld_filtered->points[i].x,cld_filtered->points[i].y,cld_filtered->points[i].z);
             node _node(pts);
             _node.status = NODE_NOT_IN_TOP_LAYER; _node.father_id = -1;
             node_mat[L].push_back(_node);
@@ -372,4 +372,8 @@ void nodeGraph::updateNodeGraph(pcl::PointCloud<pcl::PointXYZ>::Ptr cld_OOR) {
 
     this->createNodeTree();
     this->createNodeKDTree();
+
+    this->update_NodePosHost();
+    warpField_dev->setNodePosFromHost2Device(nodePos_host, node_mat[Layers-1].size());
+    warpField_dev->updateWarpField();
 }

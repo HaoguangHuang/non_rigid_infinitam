@@ -63,12 +63,12 @@ namespace ITMLib
              * @depthImgSize:[640, 480]
              * @_nodeGraph
              * */
-			void psdf(TVoxel& voxel, const Eigen::Vector4f& voxel_in_model_coo,
-					  const Eigen::Vector4f& projParams_d, float mu, int maxW,
+			void psdf(TVoxel& voxel, const Eigen::Vector4d& voxel_in_model_coo,
+					  const Eigen::Vector4d& projParams_d, float mu, int maxW,
 					  float* depth, const Eigen::Vector2i& depthImgSize,
 					  nodeGraph* _nodeGraph, const int& locId);
 
-			void psdfCore(TVoxel &voxel, const Eigen::Vector4f &projParams_d, Eigen::Matrix4d& T, const Eigen::Vector4f &pt_model,
+			void psdfCore(TVoxel &voxel, const Eigen::Vector4d &projParams_d, Eigen::Matrix4d& T, const Eigen::Vector4d &pt_model,
                           float mu, int maxW,
                           float *depth, const Eigen::Vector2i &depthImgSize);
 

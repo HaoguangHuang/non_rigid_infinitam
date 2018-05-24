@@ -4,6 +4,8 @@
 #include "pcl/visualization/cloud_viewer.h"
 #include "../Objects/nodeGraph.h"
 #include "./ITMMainEngine_dynamic.cpp"
+#include <sstream>
+
 
 using namespace ITMLib::Engine;
 
@@ -330,6 +332,8 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
     pcl::PointCloud<pcl::PointXYZ>::Ptr cld_live(new pcl::PointCloud<pcl::PointXYZ>);
     ITMMainEngine::transformUVD2XYZ(cld_live, view);
 
+    std::cout<<"Now processing frame "<<currentFrameNo<<" !"<<std::endl;
+
     if(currentFrameNo == 0){
 		///exclude outlier in the first frame
 		ITMMainEngine::boundingBox(cld_live);
@@ -363,7 +367,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
         }
 
         //hierarchical ICP
-        denseMapper->hierarchicalICP(_nodeGraph, extracted_cloud, cld_live);
+        denseMapper->hierarchicalICP(_nodeGraph, cld_lastFrame, cld_live);
 
         //use warp field and psdf to integrate DepthImage into canonical volume(here we can refer to VolumeDeform)
         denseMapper->integrateCanonicalVolume(view, scene, _nodeGraph);
@@ -371,10 +375,15 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
         //perform fetchCloud in canonical volume
         fetchCloud_parallel(extracted_cloud, scene);
 
-        //use warp field to get live pointcloud model
-
         //raycast canonical volume
         trackingController->Prepare(trackingState, view, renderState_live);
+    }
+
+    if(currentFrameNo % 25 == 0){
+        ///save extracted_cloud
+        std::stringstream ss;
+        ss<<currentFrameNo;
+        pcl::io::savePCDFile("../Files/result/extracted_cld_"+ss.str()+".pcd",*extracted_cloud);
     }
 
 #if 0
