@@ -6,11 +6,11 @@
 #include "../Utils/ITMLibSettings.h"
 #include "./ITMMeshingEngine.h"
 #include "./ITMDenseMapper.h"
-//#include "../Utils/ITMLibDefines.h"
 #include "pcl/point_types.h"
 #include "pcl/io/pcd_io.h"
 #include "pcl/point_cloud.h"
 #include "../Objects/TimeWatcher.h"
+#include "./DeviceSpecific/CUDA/scene_CUDA.h"
 
 /** \mainpage
     This is the API reference documentation for InfiniTAM. For a general
@@ -82,6 +82,8 @@ namespace ITMLib
 
 			ITMRenderState *renderState_live;
 			ITMRenderState *renderState_freeview;
+
+
 
 		public:
 			enum GetImageType
@@ -156,6 +158,8 @@ namespace ITMLib
 			void fetchCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *scene);
 
 			void fetchCloud_parallel(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *scene);
+
+            void fetchCloud_CUDA(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *scene);
 
 			nodeGraph* _nodeGraph;
             TimeWatcher* _TimeWatcher;

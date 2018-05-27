@@ -103,6 +103,7 @@ Engine/DeviceSpecific/CUDA/ITMMeshingEngine_CUDA.cu
 
 
 Engine/DeviceSpecific/CUDA/warpField_CUDA.cu
+Engine/DeviceSpecific/CUDA/scene_CUDA.cu
 )
 
 set(ITMLIB_ENGINE_DEVICESPECIFIC_CUDA_HEADERS
@@ -119,6 +120,7 @@ Engine/DeviceSpecific/CUDA/ITMVisualisationEngine_CUDA.h
 Engine/DeviceSpecific/CUDA/ITMMeshingEngine_CUDA.h
 
 Engine/DeviceSpecific/CUDA/warpField_CUDA.h
+Engine/DeviceSpecific/CUDA/scene_CUDA.h
 )
 
 ##

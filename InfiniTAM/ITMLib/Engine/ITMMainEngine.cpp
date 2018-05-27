@@ -396,6 +396,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
         //perform fetchCloud in canonical volume
         _TimeWatcher->TIC(FETCH_CLOUD);
         fetchCloud_parallel(extracted_cloud, scene);
+//        fetchCloud_CUDA(extracted_cloud, scene);
         _TimeWatcher->TOC(FETCH_CLOUD);
 
         //raycast canonical volume

@@ -1,5 +1,5 @@
 //
-// Created by root on 18-5-14.
+// Created by Haoguang Huang on 18-5-14.
 //
 
 #ifndef INFINITAM_WARPFIELD_CUDA_H
