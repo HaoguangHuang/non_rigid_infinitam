@@ -305,7 +305,7 @@ template<typename TVoxel, typename TIndex>
 void ITMDenseMapper<TVoxel,TIndex>::psdfCore(TVoxel &voxel, const Eigen::Vector4d &projParams_d, Eigen::Matrix4d& T,
                                              const Eigen::Vector4d &voxel_in_model_coo, float mu, int maxW,
                                              float *depth, const Eigen::Vector2i &depthImgSize) {
-    Eigen::Vector4d voxel_camera;
+//    Eigen::Vector4d voxel_camera;
     Eigen::Vector2f voxel_image;
     float oldF, newF;
     int oldW, newW;
@@ -314,11 +314,11 @@ void ITMDenseMapper<TVoxel,TIndex>::psdfCore(TVoxel &voxel, const Eigen::Vector4
     Eigen::Vector4d voxel_in_live_camera_coo = T * voxel_in_model_coo.cast<double>();
     if(voxel_in_live_camera_coo(2) <= 0) return; //z<0 means this voxel is behind the camera view
 
-    //project point into image
+    //project voxel into image
     double fx = projParams_d(0), fy = projParams_d(1), cx = projParams_d(2), cy = projParams_d(3);
-    voxel_camera(0) = fx * voxel_in_live_camera_coo(0) / voxel_in_live_camera_coo(2) + cx; //u
-    voxel_camera(1) = fy * voxel_in_live_camera_coo(1) / voxel_in_live_camera_coo(2) + cy; //v
-    double &u = voxel_camera(0), &v = voxel_camera(1);
+    voxel_image(0) = fx * voxel_in_live_camera_coo(0) / voxel_in_live_camera_coo(2) + cx; //u
+    voxel_image(1) = fy * voxel_in_live_camera_coo(1) / voxel_in_live_camera_coo(2) + cy; //v
+    float &u = voxel_image(0), &v = voxel_image(1);
     if(u < 1 || v < 1 || u > depthImgSize(0)-1 || v > depthImgSize(1)-1) return; //depthImgSize = [640,480]
 
     //get depth measure from live depth map

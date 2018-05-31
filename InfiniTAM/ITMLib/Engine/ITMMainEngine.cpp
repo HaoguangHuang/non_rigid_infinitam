@@ -5,6 +5,7 @@
 #include "../Objects/nodeGraph.h"
 #include "./ITMMainEngine_dynamic.cpp"
 #include "../Objects/TimeWatcher.cpp"
+#include "cuda_runtime_api.h"
 #include <sstream>
 
 
@@ -217,6 +218,12 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
         cld_lastFrame(new pcl::PointCloud<pcl::PointXYZ>)
 {
 
+    _TsdfVolume = new TsdfVolume(Eigen::Vector3i(settings->sceneParams.vol_resolution,settings->sceneParams.vol_resolution,settings->sceneParams.vol_resolution),
+                                 settings->sceneParams.vol_resolution*settings->sceneParams.voxelSize);
+
+
+	_ColorVolume = new ColorVolume(*_TsdfVolume);
+
     _TimeWatcher = new TimeWatcher();
 
     // create all the things required for marching cubes and mesh extraction
@@ -350,6 +357,47 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 		_nodeGraph->createNodeTree();
 		_nodeGraph->createNodeKDTree();
         _TimeWatcher->TOC(CREATE_NODETREE);
+
+        //test CUDA integration of TSDFVolume
+#if 1
+
+		int3 voxelWrap = make_int3(0,0,0);
+		_TimeWatcher->TIC(INTEGRATE_VOLUME);
+		_TsdfVolume->integrateCanonicalVolume(view, scene, _nodeGraph, _ColorVolume);
+		_TimeWatcher->TOC(INTEGRATE_VOLUME);
+		DeviceArray<pcl::PointXYZRGB> cloud_output;
+		cloud_output.create(TsdfVolume::DEFAULT_CLOUD_BUFFER_SIZE);
+
+		_TimeWatcher->TIC(FETCH_CLOUD);
+		DeviceArray<pcl::PointXYZRGB> cloud_buffer = _TsdfVolume->fetchCloud(cloud_output,
+																			 voxelWrap,
+																			 _ColorVolume->data(),
+																			 0,512,
+																			 0,512,
+																			 0,512,
+																			 make_int3(0,0,0));
+		_TimeWatcher->TOC(FETCH_CLOUD);
+
+		_TimeWatcher->showTimeCost();
+		pcl::PointCloud<pcl::PointXYZRGB>::Ptr cld_xyzrgb(new pcl::PointCloud<pcl::PointXYZRGB>);
+		cloud_buffer.download(cld_xyzrgb->points);//unit:meter
+		cld_xyzrgb->resize(cloud_buffer.size());
+
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cld_xyz(new pcl::PointCloud<pcl::PointXYZ>);
+		for(int i = 0; i < cld_xyzrgb->size(); i++){
+			pcl::PointXYZ pts(cld_xyzrgb->points[i].x,
+							  cld_xyzrgb->points[i].y,
+							  cld_xyzrgb->points[i].z);
+			cld_xyz->push_back(pts);
+		}
+
+		pcl::visualization::CloudViewer viewer("Cloud Viewer");
+        viewer.showCloud(cld_xyz);
+        while(!viewer.wasStopped()){}
+
+		cloud_buffer.release();
+		cloud_output.release();
+#endif
 
         ///integrate DepthImage into canonical volume
         _TimeWatcher->TIC(INTEGRATE_VOLUME);

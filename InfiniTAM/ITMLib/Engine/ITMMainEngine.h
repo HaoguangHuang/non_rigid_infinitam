@@ -11,6 +11,8 @@
 #include "pcl/point_cloud.h"
 #include "../Objects/TimeWatcher.h"
 #include "./DeviceSpecific/CUDA/scene_CUDA.h"
+#include "../Objects/TSDFVolume.h"
+#include "../Objects/ColorVolume.h"
 
 /** \mainpage
     This is the API reference documentation for InfiniTAM. For a general
@@ -163,6 +165,9 @@ namespace ITMLib
 
 			nodeGraph* _nodeGraph;
             TimeWatcher* _TimeWatcher;
+
+			TsdfVolume* _TsdfVolume;
+			ColorVolume* _ColorVolume;
 		};
 	}
 }

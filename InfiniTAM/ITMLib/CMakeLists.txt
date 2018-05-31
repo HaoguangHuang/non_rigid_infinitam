@@ -61,6 +61,21 @@ Engine/DeviceAgnostic/ITMPixelUtils.h
 Engine/DeviceAgnostic/ITMMeshingEngine.h
 )
 
+
+file(GLOB CUDA_CONTAINERS
+Engine/DeviceSpecific/CUDA/containers/*.cpp
+Engine/DeviceSpecific/CUDA/containers/*.hpp
+)
+
+file(GLOB FILE_FROM_KINTINUOUS_CU
+Engine/DeviceSpecific/CUDA/fromKintinuous/*.cu)
+
+file(GLOB FILE_FROM_KINTINUOUS_H
+Engine/DeviceSpecific/CUDA/fromKintinuous/*.h)
+
+file(GLOB FILE_FROM_KINTINUOUS_HPP
+Engine/DeviceSpecific/CUDA/fromKintinuous/*.hpp)
+
 ##
 set(ITMLIB_ENGINE_DEVICESPECIFIC_CPU_SOURCES
 Engine/DeviceSpecific/CPU/ITMColorTracker_CPU.cpp
@@ -73,6 +88,9 @@ Engine/DeviceSpecific/CPU/ITMSwappingEngine_CPU.cpp
 Engine/DeviceSpecific/CPU/ITMViewBuilder_CPU.cpp
 Engine/DeviceSpecific/CPU/ITMVisualisationEngine_CPU.cpp
 Engine/DeviceSpecific/CPU/ITMMeshingEngine_CPU.cpp
+
+
+${CUDA_CONTAINERS}
 )
 
 set(ITMLIB_ENGINE_DEVICESPECIFIC_CPU_HEADERS
@@ -104,6 +122,7 @@ Engine/DeviceSpecific/CUDA/ITMMeshingEngine_CUDA.cu
 
 Engine/DeviceSpecific/CUDA/warpField_CUDA.cu
 Engine/DeviceSpecific/CUDA/scene_CUDA.cu
+${FILE_FROM_KINTINUOUS_CU}
 )
 
 set(ITMLIB_ENGINE_DEVICESPECIFIC_CUDA_HEADERS
@@ -121,6 +140,8 @@ Engine/DeviceSpecific/CUDA/ITMMeshingEngine_CUDA.h
 
 Engine/DeviceSpecific/CUDA/warpField_CUDA.h
 Engine/DeviceSpecific/CUDA/scene_CUDA.h
+${FILE_FROM_KINTINUOUS_H}
+${FILE_FROM_KINTINUOUS_HPP}
 )
 
 ##
@@ -187,7 +208,10 @@ ${ITMLIB_ENGINE_DEVICESPECIFIC_CPU_SOURCES}
 ${ITMLIB_ENGINE_DEVICESPECIFIC_CPU_HEADERS}
         Objects/nodeGraph.h Objects/node.h
         Objects/nodeGraph.cpp Objects/node.cpp
-        Objects/TimeWatcher.h Objects/TimeWatcher.cpp)
+        Objects/TimeWatcher.h Objects/TimeWatcher.cpp
+        Objects/TSDFVolume.h Objects/TSDFVolume.cpp
+        Objects/ColorVolume.h Objects/ColorVolume.cpp
+        Objects/Volume.h)
 
 set(ITMLIB_CUDA_OBJECTS
 ${ITMLIB_ENGINE_DEVICESPECIFIC_CUDA_SOURCES}

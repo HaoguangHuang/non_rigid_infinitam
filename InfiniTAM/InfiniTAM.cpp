@@ -162,7 +162,7 @@ try
 //	}
 
 //	ITMLibSettings *internalSettings = new ITMLibSettings();
-	ITMLibSettings *internalSettings = new ITMLibSettings(volume_size,volume_resolution);
+	ITMLibSettings *internalSettings = new ITMLibSettings(volume_size, volume_resolution);
 //	ITMMainEngine *mainEngine = new ITMMainEngine(internalSettings, &imageSource->calib, cld, output_file_name, imageSource->getRGBImageSize(), imageSource->getDepthImageSize());
 	int rgb_size[2] = {640,480}; int depth_size[2] = {640,480};
     ITMMainEngine *mainEngine = new ITMMainEngine(internalSettings, &imageSource->calib, rgb_size, depth_size);

@@ -37,6 +37,7 @@ namespace ITMLib
 			*/
 			float mu;
 			float mu_mm;//whose unit is mm
+			float volume_size;
 			/** \brief
 			    Up to @ref maxW observations per voxel are averaged.
 			    Beyond that a sliding average is computed.
@@ -50,15 +51,16 @@ namespace ITMLib
 
 
 			ITMSceneParams(float mu, int maxW, float voxelSize, 
-				float viewFrustum_min, float viewFrustum_max, bool stopIntegratingAtMaxW, unsigned int vol_resolution, float mu_mm)
+				float viewFrustum_min, float viewFrustum_max, bool stopIntegratingAtMaxW, unsigned int vol_resolution, float mu_mm, float volume_size)
 			{
 				this->mu = mu;
 				this->maxW = maxW;
 				this->voxelSize = voxelSize;
-				this->viewFrustum_min = viewFrustum_min; this->viewFrustum_max = viewFrustum_max;
+				this->viewFrustum_min = viewFrustum_min; this->viewFrustum_max = viewFrustum_max/*3m*/;
 				this->stopIntegratingAtMaxW = stopIntegratingAtMaxW;
 				this->vol_resolution = vol_resolution;
 				this->mu_mm = mu_mm;
+				this->volume_size = volume_size;//3m
 			}
 
 			explicit ITMSceneParams(const ITMSceneParams *sceneParams) { this->SetFrom(sceneParams); }
