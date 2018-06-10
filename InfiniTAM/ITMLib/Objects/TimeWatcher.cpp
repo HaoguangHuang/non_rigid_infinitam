@@ -6,8 +6,8 @@
 #include <iostream>
 
 
-void TimeWatcher::showTimeCost() {
-    printf("--------This is frame %d--------\n", TimeWatcher::count[3]-1); //every frame should perform raycast step
+void TimeWatcher::showTimeCost(const unsigned int& currentFrameNo) {
+    printf("--------This is frame %d--------\n", currentFrameNo); //every frame should perform raycast step
     printf("CREATE_NODETREE AVERAGE TIME COST: %f ms\n", this->getAverageTime_ms(CREATE_NODETREE));
     printf("HIERARCHICAL_ICP AVERAGE TIME COST: %f ms\n", this->getAverageTime_ms(HIERARCHICAL_ICP));
     printf("INTEGRATE_VOLUME AVERAGE TIME COST: %f ms\n", this->getAverageTime_ms(INTEGRATE_VOLUME));

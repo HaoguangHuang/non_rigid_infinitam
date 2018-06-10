@@ -74,56 +74,56 @@ class ColorVolume;
 class TsdfVolume
 {
 public:
-  /** \brief Default buffer size for fetching cloud. It limits max number of points that can be extracted */
-  enum { DEFAULT_CLOUD_BUFFER_SIZE = 10 * 1000 * 1000 };
+    /** \brief Default buffer size for fetching cloud. It limits max number of points that can be extracted */
+    enum { DEFAULT_CLOUD_BUFFER_SIZE = 10 * 1000 * 1000 };
 
-  /** \brief Constructor
+    /** \brief Constructor
     * \param[in] resolution Volume resolution. Usually be 512
     * \param[in] volume_size Usually be 3m.
     */
-  TsdfVolume(const Eigen::Vector3i resolution, const float volume_size);
+    TsdfVolume(const Eigen::Vector3i resolution, const float volume_size);
 
-  /** \brief Sets Tsdf volume size for each dimention
+    /** \brief Sets Tsdf volume size for each dimention
     * \param[in] size size of tsdf volume in meters
     */
-  void
-  setSize(const Eigen::Vector3f& size);
+    void
+    setSize(const Eigen::Vector3f& size);
 
-  /** \brief Sets Tsdf truncation distance. Must be greater than 2 * volume_voxel_size
+    /** \brief Sets Tsdf truncation distance. Must be greater than 2 * volume_voxel_size
     * \param[in] distance TSDF truncation distance
     */
-  void
-  setTsdfTruncDist (float distance);
+    void
+    setTsdfTruncDist (float distance);
 
-  /** \brief Returns tsdf volume container that point to data in GPU memroy */
-  DeviceArray2D<short>
-  data() const;
+    /** \brief Returns tsdf volume container that point to data in GPU memroy */
+    DeviceArray2D<short>
+    data() const;
 
-  /** \brief Returns volume size in meters */
-  const Eigen::Vector3f&
-  getSize() const;
+    /** \brief Returns volume size in meters */
+    const Eigen::Vector3f&
+    getSize() const;
 
-  /** \brief Returns volume resolution */
-  const Eigen::Vector3i&
-  getResolution() const;
+    /** \brief Returns volume resolution */
+    const Eigen::Vector3i&
+    getResolution() const;
 
-  /** \brief Returns volume voxel size in meters */
-  const Eigen::Vector3f
-  getVoxelSize() const;
+    /** \brief Returns volume voxel size in meters */
+    const Eigen::Vector3f
+    getVoxelSize() const;
 
-  /** \brief Returns tsdf truncation distance in meters */
-  float
-  getTsdfTruncDist () const;
+    /** \brief Returns tsdf truncation distance in meters */
+    float
+    getTsdfTruncDist () const;
 
-  /** \brief Resets tsdf volume data to uninitialized state */
-  void
-  reset();
+    /** \brief Resets tsdf volume data to uninitialized state */
+    void
+    reset();
 
-  /** \brief Generates cloud using GPU in connected6 mode only
+    /** \brief Generates cloud using GPU in connected6 mode only
     * \param[out] cloud_buffer buffer to store point cloud
     * \return DeviceArray with disabled reference counting that points to filled part of cloud_buffer.
     */
-  DeviceArray<pcl::PointXYZRGB> fetchCloud(DeviceArray<pcl::PointXYZRGB>& cloud_buffer,
+    DeviceArray<pcl::PointXYZRGB> fetchCloud(DeviceArray<pcl::PointXYZRGB>& cloud_buffer,
                                       int3 & voxelWrap,
                                       PtrStep<uchar4> color_volume,
                                       int minX,
@@ -135,41 +135,51 @@ public:
                                       int3 realVoxelWrap,
                                       int subsample = 1) const;
 
-  /** \brief Downloads tsdf volume from GPU memory.
+    /** \brief Downloads tsdf volume from GPU memory.
     * \param[out] tsdf Array with tsdf values. if volume resolution is 512x512x512, so for voxel (x,y,z) tsdf value can be retrieved as volume[512*512*z + 512*y + x];
     */
-  void
-  downloadTsdf (std::vector<float>& tsdf) const;
+    void
+    downloadTsdf (std::vector<float>& tsdf) const;
 
-  /** \brief Downloads TSDF volume and according voxel weights from GPU memory
+    /** \brief Downloads TSDF volume and according voxel weights from GPU memory
     * \param[out] tsdf Array with tsdf values. if volume resolution is 512x512x512, so for voxel (x,y,z) tsdf value can be retrieved as volume[512*512*z + 512*y + x];
     * \param[out] weights Array with tsdf voxel weights. Same size and access index as for tsdf. A weight of 0 indicates the voxel was never used.
     */
-  void
-  downloadTsdfAndWeighs(std::vector<float>& tsdf, std::vector<short>& weights) const;
+    void
+    downloadTsdfAndWeighs(std::vector<float>& tsdf, std::vector<short>& weights) const;
 
-  void saveTsdfToDisk(std::string filename) const;
+    void saveTsdfToDisk(std::string filename) const;
 
-  /************************************************************************/
-  void integrateCanonicalVolume(const ITMLib::Objects::ITMView * view,
+    /************************************************************************/
+    void integrateCanonicalVolume(const ITMLib::Objects::ITMView * view,
                                 ITMLib::Objects::ITMScene<ITMVoxel, ITMVoxelIndex>* scene,
                                 nodeGraph* _nodeGraph,
                                 ColorVolume* _ColorVolume);
 
+    /// \brief download result of fetchCloud into host memory
+    void getExtractedCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cld);
+
+    /// \brief override function 'downloadTsdf(std::vector<float>& tsdf) const'
+    void
+    downloadTsdf (std::vector<short>& tsdf) const;
 
 
-private:
-  /** \brief tsdf volume size in meters */
-  Eigen::Vector3f size_;
+    DeviceArray<pcl::PointXYZRGB> cloud_output;//input parameter of function fetchCloud
+    DeviceArray<pcl::PointXYZRGB> cloud_buffer;//output parameter of function fetchCloud
+    int3 voxelWrap;
 
-  /** \brief tsdf volume resolution */
-  Eigen::Vector3i resolution_;
+    private:
+    /** \brief tsdf volume size in meters */
+    Eigen::Vector3f size_;
 
-  /** \brief tsdf volume data container */
-  DeviceArray2D<short> volume_;
+    /** \brief tsdf volume resolution */
+    Eigen::Vector3i resolution_;
 
-  /** \brief tsdf truncation distance */
-  float tranc_dist_;
+    /** \brief tsdf volume data container */
+    DeviceArray2D<short> volume_;
+
+    /** \brief tsdf truncation distance */
+    float tranc_dist_;
 };
 
 #endif /* TSDF_VOLUME_H_ */

@@ -105,7 +105,7 @@ void ITMMainEngine::fetchCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_clo
 
 /*openMP shoule be opened*/
 //#ifdef WITH_OPENMP
-//#pragma omp parallel for
+#pragma omp parallel for
 //#endif
     for (int x = 1; x < volume_x-1; x++) {
         for (int y = 1; y < volume_y - 1; y++) {
@@ -118,10 +118,10 @@ void ITMMainEngine::fetchCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_clo
                                      cell_size).matrix();
 
                 int dz = 1;
-//                for (int dy = -1; dy < 2; dy++) {
-//                    for (int dx = -1; dx < 2; dx++) {
-                for (int dy = 0; dy < 1; dy++) {
-                    for (int dx = 0; dx < 1; dx++) {
+                for (int dy = -1; dy < 2; dy++) {
+                    for (int dx = -1; dx < 2; dx++) {
+//                for (int dy = 0; dy < 1; dy++) {
+//                    for (int dx = 0; dx < 1; dx++) {
                         ITMVoxel voxel = FETCH(x + dx, y + dy, z + dz);
                         float Fn = ITMVoxel::SDF_valueToFloat(voxel.sdf); //[0,32767]
                         int Wn = voxel.w_depth;
@@ -174,6 +174,15 @@ void ITMMainEngine::fetchCloud_parallel(pcl::PointCloud<pcl::PointXYZ>::Ptr extr
     Eigen::Vector3d translation_volumeCoo_to_liveFrameCoo(-volume_x*cell_size[0]/2, -volume_y*cell_size[1]/2, 0);
 
 
+//    int data[] = {81000724, 80477460,72617233,72616212,72616209};
+//    const int N1 = sizeof(data)/sizeof(int);
+//    for(int i = 0; i < N1; i++){ //81000724, 80477460,72617233,72616212,72616209
+//        int locId = data[i];
+//        ITMVoxel voxel_tmp = scene->localVBA.GetVoxelBlocks()[locId];
+//        float F = ITMVoxel::SDF_valueToFloat(voxel_tmp.sdf);
+//        std::cout<<F<<" "<<std::endl;
+//    }
+
 #pragma omp parallel for
     for(int locId = 0; locId < N; locId++){
         int z = locId / (volume_x * volume_y);
@@ -192,6 +201,7 @@ void ITMMainEngine::fetchCloud_parallel(pcl::PointCloud<pcl::PointXYZ>::Ptr extr
         ITMVoxel voxel = FETCH(x + dx, y + dy, z + dz);
         float Fn = ITMVoxel::SDF_valueToFloat(voxel.sdf); //[0,32767]
         int Wn = voxel.w_depth;
+
 
         if (F > 0 && Fn < 0) {
             Eigen::Vector3d Vn = (
@@ -214,6 +224,22 @@ void ITMMainEngine::fetchCloud_parallel(pcl::PointCloud<pcl::PointXYZ>::Ptr extr
             extracted_cloud->push_back(xyz);
 
         }
+    }
+}
+
+
+void ITMMainEngine::copySDFtoScene(ITMScene<ITMVoxel, ITMVoxelIndex> *scene, TsdfVolume *_TsdfVolume) {
+    std::vector<short> sdf_vec;
+    _TsdfVolume->downloadTsdf(sdf_vec);//sdf value vary from [-32767,1]
+
+    ITMVoxel *voxelArray = scene->localVBA.GetVoxelBlocks();
+    const int N = sdf_vec.size();
+//#pragma unroll
+    int cnt = 0;
+    for(int i = 0; i < N; i++){
+        voxelArray[i].sdf = sdf_vec[i];
+        voxelArray[i].w_depth = 1; //no influence at all
+        if(voxelArray[i].sdf > -32767 && voxelArray[i].sdf < 32767 && voxelArray[i].sdf!=0) {printf("voxelArray[%d]=%d\n",i,voxelArray[i].sdf);cnt++;}
     }
 }
 

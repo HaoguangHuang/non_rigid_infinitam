@@ -146,10 +146,6 @@ namespace ITMLib
 			~ITMMainEngine();
 
 			/**********************************************************/
-			pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud; //pointcloud in first frame camera coo
-			pcl::PointCloud<pcl::PointXYZ>::Ptr cld_lastFrame; //an extracted cloud after transforming into last frame
-			pcl::PointCloud<pcl::PointXYZ>::Ptr cld_OOR; //pointcloud that don't belong to any node
-
 //            void fetchCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *_warped_scene);
 //            void fetchCloud_test(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *_warped_scene);
 
@@ -163,11 +159,21 @@ namespace ITMLib
 
             void fetchCloud_CUDA(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud, ITMScene<ITMVoxel, ITMVoxelIndex> *scene);
 
+            /// \brief download sdf stored in TsdfVolume into class 'scene'
+            void copySDFtoScene(ITMScene<ITMVoxel, ITMVoxelIndex> *scene, TsdfVolume* _TsdfVolume);
+
+
+            pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cloud; //pointcloud in first frame camera coo
+            pcl::PointCloud<pcl::PointXYZ>::Ptr cld_lastFrame; //an extracted cloud after transforming into last frame
+            pcl::PointCloud<pcl::PointXYZ>::Ptr cld_OOR; //pointcloud that don't belong to any node
+
 			nodeGraph* _nodeGraph;
             TimeWatcher* _TimeWatcher;
 
 			TsdfVolume* _TsdfVolume;
 			ColorVolume* _ColorVolume;
+
+
 		};
 	}
 }

@@ -177,6 +177,8 @@ struct FullScan6Slice
                 p.w = *reinterpret_cast<float*>(&rgb);
 
                 points[local_count++] = p;
+
+//                printf("p.x = %f, p.y = %f, p.z = %f\n",p.x, p.y, p.z);
               }
           }               /* if (x + 1 < VOLUME_X) */
 
@@ -243,6 +245,7 @@ struct FullScan6Slice
 
       if (total_warp > 0)
       {
+        //can reach here
         int lane = Warp::laneId ();
         int storage_index = (ftid >> Warp::LOG_WARP_SIZE) * Warp::WARP_SIZE * MAX_LOCAL_POINTS;
 
@@ -292,6 +295,7 @@ struct FullScan6Slice
     }         /* for(int z = 0; z < VOLUME_Z - 1; ++z) */    //////    // prepare for future scans
     if (ftid == 0)
     {
+      //can reach here
       unsigned int total_blocks = gridDim.x * gridDim.y * gridDim.z;
       unsigned int value = atomicInc (&blocks_done, total_blocks);
 
@@ -301,6 +305,7 @@ struct FullScan6Slice
         output_count = min ((int)output.size, global_count);
         blocks_done = 0;
         global_count = 0;
+        //can reach here
       }
     }
   }       /* operator() */
@@ -308,9 +313,16 @@ struct FullScan6Slice
   __device__ __forceinline__ void
   store_point_type (float x, float y, float z, int r, int g, int b, int w, PointXYZRGB * ptr) const
   {
-      ptr->x = x + realVoxelWrap.x * cell_size.x - ((cell_size.x * VOLUME_X) / 2);
-      ptr->y = y + realVoxelWrap.y * cell_size.y - ((cell_size.y * VOLUME_Y) / 2);
-      ptr->z = z + realVoxelWrap.z * cell_size.z - ((cell_size.z * VOLUME_Z) / 2);
+//      ptr->x = x + realVoxelWrap.x * cell_size.x - ((cell_size.x * VOLUME_X) / 2);
+//      ptr->y = y + realVoxelWrap.y * cell_size.y - ((cell_size.y * VOLUME_Y) / 2);
+//      ptr->z = z + realVoxelWrap.z * cell_size.z - ((cell_size.z * VOLUME_Z) / 2);
+
+      ptr->x = x  - ((cell_size.x * VOLUME_X) / 2);
+      ptr->y = y  - ((cell_size.y * VOLUME_Y) / 2);
+      ptr->z = z;
+
+//      printf("ptr->x = %f, ptr->y = %f, ptr->z = %f\n",ptr->x, ptr->y, ptr->z);
+
       ptr->r = b;
       ptr->g = g;
       ptr->b = r;
@@ -363,7 +375,7 @@ size_t extractCloudSlice(const PtrStep<short>& volume,
   int amountY = maxY - minY;
   int amountZ = maxZ - minZ;
 
-  dim3 block (CTA_SIZE_X, CTA_SIZE_Y);
+  dim3 block (CTA_SIZE_X, CTA_SIZE_Y); //(32, 6)
 
   bool fullCloud = amountX == VOLUME_X &&
 			       amountY == VOLUME_Y &&

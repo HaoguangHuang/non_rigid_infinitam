@@ -65,6 +65,8 @@ using namespace ITMLib::Objects;
 TsdfVolume::TsdfVolume(const Eigen::Vector3i resolution/*512*/, const float volume_size/*3m*/)
  : resolution_(resolution)
 {
+    voxelWrap = make_int3(0,0,0);
+
     int volume_x = resolution_(0);
     int volume_y = resolution_(1);
     int volume_z = resolution_(2);
@@ -191,6 +193,16 @@ TsdfVolume::downloadTsdf (std::vector<float>& tsdf) const
         tsdf[i] = tmp/DIVISOR;
     }
 }
+
+
+void
+TsdfVolume::downloadTsdf (std::vector<short>& tsdf) const
+{
+    tsdf.resize (volume_.cols() * volume_.rows());
+//    volume_.download(&tsdf[0], volume_.cols() * sizeof(int));
+    volume_.download(&tsdf[0], volume_.cols() * sizeof(short));
+}
+
 
 void
 TsdfVolume::downloadTsdfAndWeighs (std::vector<float>& tsdf, std::vector<short>& weights) const
@@ -319,7 +331,23 @@ void TsdfVolume::integrateCanonicalVolume(const ITMView * view,
 }
 
 
+void TsdfVolume::getExtractedCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_cld){
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cld_xyzrgb(new pcl::PointCloud<pcl::PointXYZRGB>);
+    cloud_buffer.download(cld_xyzrgb->points);//unit:meter
+    cld_xyzrgb->resize(cloud_buffer.size());
 
+    extracted_cld->clear();
+
+    const int N = cld_xyzrgb->size();
+    extracted_cld->resize(N);
+
+#pragma unroll
+    for(int i = 0; i < N; i++){
+        extracted_cld->points[i].x = cld_xyzrgb->points[i].x * 1000.0f;
+        extracted_cld->points[i].y = cld_xyzrgb->points[i].y * 1000.0f;
+        extracted_cld->points[i].z = cld_xyzrgb->points[i].z * 1000.0f;
+    }
+}
 
 
 

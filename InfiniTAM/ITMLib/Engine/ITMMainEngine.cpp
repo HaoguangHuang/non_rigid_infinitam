@@ -358,104 +358,111 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 		_nodeGraph->createNodeKDTree();
         _TimeWatcher->TOC(CREATE_NODETREE);
 
-        //test CUDA integration of TSDFVolume
-#if 1
 
-		int3 voxelWrap = make_int3(0,0,0);
+#if 1 //CUDA integration of TSDFVolume
 		_TimeWatcher->TIC(INTEGRATE_VOLUME);
 		_TsdfVolume->integrateCanonicalVolume(view, scene, _nodeGraph, _ColorVolume);
 		_TimeWatcher->TOC(INTEGRATE_VOLUME);
-		DeviceArray<pcl::PointXYZRGB> cloud_output;
-		cloud_output.create(TsdfVolume::DEFAULT_CLOUD_BUFFER_SIZE);
 
 		_TimeWatcher->TIC(FETCH_CLOUD);
-		DeviceArray<pcl::PointXYZRGB> cloud_buffer = _TsdfVolume->fetchCloud(cloud_output,
-																			 voxelWrap,
-																			 _ColorVolume->data(),
-																			 0,512,
-																			 0,512,
-																			 0,512,
-																			 make_int3(0,0,0));
+		_TsdfVolume->cloud_buffer = _TsdfVolume->fetchCloud(_TsdfVolume->cloud_output,
+															_TsdfVolume->voxelWrap,
+															_ColorVolume->data(),
+															0,512,
+															0,512,
+															0,512,
+															make_int3(0,0,0));
+
+		_TsdfVolume->getExtractedCloud(extracted_cloud);
 		_TimeWatcher->TOC(FETCH_CLOUD);
 
-		_TimeWatcher->showTimeCost();
-		pcl::PointCloud<pcl::PointXYZRGB>::Ptr cld_xyzrgb(new pcl::PointCloud<pcl::PointXYZRGB>);
-		cloud_buffer.download(cld_xyzrgb->points);//unit:meter
-		cld_xyzrgb->resize(cloud_buffer.size());
+		/// \brief Copy sdf value of TsdfVolume in GPU into scene in CPU
+		copySDFtoScene(scene, _TsdfVolume);
 
-		pcl::PointCloud<pcl::PointXYZ>::Ptr cld_xyz(new pcl::PointCloud<pcl::PointXYZ>);
-		for(int i = 0; i < cld_xyzrgb->size(); i++){
-			pcl::PointXYZ pts(cld_xyzrgb->points[i].x,
-							  cld_xyzrgb->points[i].y,
-							  cld_xyzrgb->points[i].z);
-			cld_xyz->push_back(pts);
-		}
+//        pcl::visualization::PCLVisualizer viewer("Cloud Viewer");
+//        viewer.addPointCloud(extracted_cloud,"pointcloud1");
+//        viewer.addPointCloud(cld_live,"pointcloud2");
+//		viewer.addCoordinateSystem (200);
+//		viewer.spin();
 
-		pcl::visualization::CloudViewer viewer("Cloud Viewer");
-        viewer.showCloud(cld_xyz);
-        while(!viewer.wasStopped()){}
 
-		cloud_buffer.release();
-		cloud_output.release();
-#endif
-
-        ///integrate DepthImage into canonical volume
+#else
+        /// \brief integrate DepthImage into canonical volume
         _TimeWatcher->TIC(INTEGRATE_VOLUME);
 		denseMapper->integrateCanonicalVolume(view, scene, _nodeGraph);
         _TimeWatcher->TOC(INTEGRATE_VOLUME);
 
-        ///raycast canonical volume
+		/// \brief perform fetchCloud in canonical volume
+		_TimeWatcher->TIC(FETCH_CLOUD);
+		fetchCloud_parallel(extracted_cloud, scene);
+		_TimeWatcher->TOC(FETCH_CLOUD);
+#endif
+        /// \brief raycast canonical volume
         trackingState->pose_d->SetFrom(0,0,0,0,0,0);
         trackingState->pose_pointCloud->SetFrom(0,0,0,0,0,0);
         _TimeWatcher->TIC(RAYCAST);
         trackingController->Prepare(trackingState, view, renderState_live);
         _TimeWatcher->TOC(RAYCAST);
 
-        ///perform fetchCloud in canonical volume
-//		fetchCloud(extracted_cloud, scene);
-        _TimeWatcher->TIC(FETCH_CLOUD);
-		fetchCloud_parallel(extracted_cloud, scene);
-        _TimeWatcher->TOC(FETCH_CLOUD);
-
 //        pcl::visualization::CloudViewer viewer("Cloud Viewer");
 //        viewer.showCloud(extracted_cloud);
 //        while(!viewer.wasStopped()){}
     }
     else{ //currentFrameNo >= 1
-        //check nodeGraph needed to be updated or not
+        /// \brief nodeGraph needed to be updated or not
         if(_nodeGraph->checkUpdateOrNot(extracted_cloud, cld_OOR, cld_lastFrame)){
-            //update nodeGraph'
+            //update nodeGraph
             _TimeWatcher->TIC(CREATE_NODETREE);
             _nodeGraph->updateNodeGraph(extracted_cloud);
             _TimeWatcher->TOC(CREATE_NODETREE);
             printf("updated nodeGraph successfully! Now have %d nodes in highest layer!\n",_nodeGraph->node_mat.back().size());
         }
 
-        //hierarchical ICP
+        /// \brief hierarchical ICP
         _TimeWatcher->TIC(HIERARCHICAL_ICP);
         denseMapper->hierarchicalICP(_nodeGraph, cld_lastFrame, cld_live);
         _TimeWatcher->TOC(HIERARCHICAL_ICP);
 
-        //use warp field and psdf to integrate DepthImage into canonical volume(here we can refer to VolumeDeform)
+#if 1
+		_TimeWatcher->TIC(INTEGRATE_VOLUME);
+		_TsdfVolume->integrateCanonicalVolume(view, scene, _nodeGraph, _ColorVolume);
+		_TimeWatcher->TOC(INTEGRATE_VOLUME);
+
+		_TimeWatcher->TIC(FETCH_CLOUD);
+		_TsdfVolume->cloud_buffer = _TsdfVolume->fetchCloud(_TsdfVolume->cloud_output,
+															_TsdfVolume->voxelWrap,
+															_ColorVolume->data(),
+															0,512,
+															0,512,
+															0,512,
+															make_int3(0,0,0));
+
+		_TsdfVolume->getExtractedCloud(extracted_cloud);
+		_TimeWatcher->TOC(FETCH_CLOUD);
+
+		/// \brief Copy sdf value of TsdfVolume in GPU into scene in CPU
+		copySDFtoScene(scene, _TsdfVolume);
+#else
+        /// \brief use warp field and psdf to integrate DepthImage into canonical volume(here we can refer to VolumeDeform)
         _TimeWatcher->TIC(INTEGRATE_VOLUME);
         denseMapper->integrateCanonicalVolume(view, scene, _nodeGraph);
         _TimeWatcher->TOC(INTEGRATE_VOLUME);
 
-        //perform fetchCloud in canonical volume
+        /// \brief perform fetchCloud in canonical volume
         _TimeWatcher->TIC(FETCH_CLOUD);
         fetchCloud_parallel(extracted_cloud, scene);
 //        fetchCloud_CUDA(extracted_cloud, scene);
         _TimeWatcher->TOC(FETCH_CLOUD);
+#endif
+        /// \brief raycast canonical volume
+//        _TimeWatcher->TIC(RAYCAST);
+//        trackingController->Prepare(trackingState, view, renderState_live);
+//        _TimeWatcher->TOC(RAYCAST);
+    }/* if(currentFrameNo == 0) */
 
-        //raycast canonical volume
-        _TimeWatcher->TIC(RAYCAST);
-        trackingController->Prepare(trackingState, view, renderState_live);
-        _TimeWatcher->TOC(RAYCAST);
-    }
+    _TimeWatcher->showTimeCost(currentFrameNo);
 
-    _TimeWatcher->showTimeCost();
-
-    if(currentFrameNo % 25 == 0){
+    if(currentFrameNo % 25 == 0 && currentFrameNo ){
         ///save extracted_cloud
         std::stringstream ss;
         ss<<currentFrameNo;

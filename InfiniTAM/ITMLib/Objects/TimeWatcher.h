@@ -50,7 +50,7 @@ public:
         }
     };
 
-    void showTimeCost();
+    void showTimeCost(const unsigned int&);
 
 
     funcName status;
@@ -60,6 +60,7 @@ public:
 
     static int count[5];
     static double total_time[5]; //ms
+
 };
 
 

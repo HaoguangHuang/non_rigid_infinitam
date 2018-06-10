@@ -325,7 +325,7 @@ bool nodeGraph::checkUpdateOrNot(pcl::PointCloud<pcl::PointXYZ>::Ptr extracted_c
         const int Z = z / scale;
 
         if(X < 0 || Y < 0 || Z < 0 || X > volume_size || Y > volume_size || Z > volume_size){
-            std::cout<<"compute locId failed!"<< std::endl;
+//            std::cout<<"compute locId failed!"<< std::endl;
             continue;
         }
 
